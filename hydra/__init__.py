@@ -1,5 +1,30 @@
-"""Lendora AI - Hydra Integration Module"""
+"""
+Lendora AI - Hydra Integration Module
 
-from .head_manager import HydraClient, create_mock_negotiation_tx
+Provides WebSocket client for Cardano Hydra Head Protocol.
+Supports both real Hydra nodes and mock mode for development.
+"""
 
-__all__ = ["HydraClient", "create_mock_negotiation_tx"]
+from .head_manager import (
+    HydraClient,
+    HydraNegotiationManager,
+    HydraConfig,
+    ConnectionMode,
+    HeadState,
+    UTxO,
+    NegotiationState,
+    Settlement,
+    run_demo_negotiation,
+)
+
+__all__ = [
+    "HydraClient",
+    "HydraNegotiationManager", 
+    "HydraConfig",
+    "ConnectionMode",
+    "HeadState",
+    "UTxO",
+    "NegotiationState",
+    "Settlement",
+    "run_demo_negotiation",
+]

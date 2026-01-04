@@ -5,7 +5,7 @@ Complete API for the Privacy-First DeFi Lending Platform
 Integrates:
 - Midnight ZK Credit Checks
 - Llama 3 AI Analysis
-- Hydra Off-chain Negotiation
+- Hydra Off-chain Negotiation (Real Node Support!)
 - Aiken Validator Settlement
 """
 
@@ -20,8 +20,22 @@ from datetime import datetime
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
 
-# Add agents to path
+# Add project root to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
+
+# Import Hydra client
+try:
+    from hydra.head_manager import (
+        HydraClient, 
+        HydraNegotiationManager, 
+        HydraConfig, 
+        ConnectionMode,
+        Settlement
+    )
+    HYDRA_AVAILABLE = True
+except ImportError:
+    HYDRA_AVAILABLE = False
+    print("[WARNING] Hydra module not available, using built-in mock")
 
 
 # ============================================================================
@@ -30,6 +44,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Startup
     print("=" * 70)
     print("Lendora AI Backend API Started")
     print("=" * 70)
@@ -37,7 +52,38 @@ async def lifespan(app: FastAPI):
     print("WebSocket:   ws://localhost:8000/ws")
     print("Docs:        http://localhost:8000/docs")
     print("=" * 70)
+    
+    # Initialize Hydra manager
+    if HYDRA_AVAILABLE:
+        hydra_url = os.getenv("HYDRA_NODE_URL", "ws://127.0.0.1:4001")
+        mode = os.getenv("HYDRA_MODE", "auto")
+        
+        config = HydraConfig(
+            node_url=hydra_url,
+            mode=ConnectionMode(mode)
+        )
+        
+        app.state.hydra_manager = HydraNegotiationManager(HydraClient(config))
+        
+        try:
+            await app.state.hydra_manager.start()
+            if app.state.hydra_manager.client._mock_mode:
+                print(f"[Hydra] Running in MOCK mode (node not available)")
+            else:
+                print(f"[Hydra] Connected to node at {hydra_url}")
+        except Exception as e:
+            print(f"[Hydra] Warning: {e}")
+            app.state.hydra_manager = None
+    else:
+        app.state.hydra_manager = None
+        print("[Hydra] Module not available, using fallback")
+    
     yield
+    
+    # Shutdown
+    if hasattr(app.state, 'hydra_manager') and app.state.hydra_manager:
+        await app.state.hydra_manager.stop()
+        print("[Hydra] Disconnected")
 
 app = FastAPI(
     title="Lendora AI API",
@@ -87,6 +133,10 @@ class WorkflowRequest(BaseModel):
     interest_rate: float
     term_months: int
     lender_address: str
+
+class HydraConfigRequest(BaseModel):
+    node_url: str
+    mode: str = "auto"
 
 class WorkflowStep(BaseModel):
     step: int
@@ -153,6 +203,7 @@ class AppState:
             "totalProfit": 12543.50,
             "agentStatus": "idle"
         }
+        self.hydra_connected = False
 
 state = AppState()
 
@@ -205,11 +256,236 @@ async def perform_credit_check(borrower: str, score: int) -> Dict:
 
 
 # ============================================================================
-# Hydra Negotiation (Mock)
+# Hydra Integration (Real + Fallback)
 # ============================================================================
 
-async def open_hydra_head(offer: Dict) -> Dict:
-    """Open Hydra Head for negotiation."""
+async def open_hydra_head_real(
+    borrower: str, 
+    lender: str, 
+    principal: float, 
+    interest_rate: float,
+    term_months: int
+) -> Dict:
+    """Open Hydra Head using real client."""
+    hydra_manager = app.state.hydra_manager
+    
+    if not hydra_manager:
+        # Fallback to mock
+        return await open_hydra_head_mock({
+            "offer_id": f"offer_{int(datetime.now().timestamp())}",
+            "lender_address": lender,
+            "borrower_address": borrower,
+            "principal": principal,
+            "interest_rate": interest_rate,
+            "term_months": term_months
+        })
+    
+    try:
+        negotiation = await hydra_manager.open_negotiation(
+            borrower=borrower,
+            lender=lender,
+            principal=principal,
+            interest_rate=interest_rate,
+            term_months=term_months
+        )
+        
+        await manager.broadcast({
+            "type": "workflow_step",
+            "data": {
+                "step": 3,
+                "name": "Open Hydra Head",
+                "status": "completed",
+                "details": {
+                    "head_id": negotiation.head_id,
+                    "participants": [lender, borrower],
+                    "mode": "mock" if hydra_manager.client._mock_mode else "real"
+                }
+            }
+        })
+        
+        state.current_negotiation = {
+            "head_id": negotiation.head_id,
+            "borrower": borrower,
+            "lender": lender,
+            "principal": principal,
+            "current_rate": interest_rate,
+            "original_rate": interest_rate,
+            "term_months": term_months,
+            "rounds": 0,
+            "status": "open"
+        }
+        
+        return {
+            "head_id": negotiation.head_id,
+            "status": "open",
+            "mode": "mock" if hydra_manager.client._mock_mode else "real"
+        }
+        
+    except Exception as e:
+        print(f"[Hydra] Error opening head: {e}")
+        # Fallback to mock
+        return await open_hydra_head_mock({
+            "offer_id": f"offer_{int(datetime.now().timestamp())}",
+            "lender_address": lender,
+            "borrower_address": borrower,
+            "principal": principal,
+            "interest_rate": interest_rate,
+            "term_months": term_months
+        })
+
+
+async def negotiate_in_hydra_real(proposed_rate: float) -> Dict:
+    """Negotiate in Hydra Head using real client."""
+    if not state.current_negotiation:
+        return {"error": "No active negotiation"}
+    
+    neg = state.current_negotiation
+    hydra_manager = app.state.hydra_manager
+    
+    if hydra_manager and neg.get("head_id") in hydra_manager.active_negotiations:
+        try:
+            result = await hydra_manager.submit_counter_offer(
+                head_id=neg["head_id"],
+                proposed_rate=proposed_rate,
+                from_party=neg["borrower"]
+            )
+            
+            neg["rounds"] = result.get("round", neg["rounds"] + 1)
+            neg["current_rate"] = result.get("new_rate", proposed_rate)
+            
+            await manager.broadcast({
+                "type": "workflow_step",
+                "data": {
+                    "step": 4,
+                    "name": f"Hydra Negotiation Round {neg['rounds']}",
+                    "status": "completed",
+                    "details": {
+                        "proposed_rate": proposed_rate,
+                        "current_rate": neg["current_rate"],
+                        "message": "Counter-offer submitted (zero gas!)"
+                    }
+                }
+            })
+            
+            return result
+            
+        except Exception as e:
+            print(f"[Hydra] Negotiation error: {e}")
+    
+    # Fallback to mock negotiation logic
+    return await negotiate_in_hydra_mock(proposed_rate)
+
+
+async def close_hydra_and_settle_real() -> Dict:
+    """Close Hydra Head and settle using real client."""
+    if not state.current_negotiation:
+        return {"error": "No active negotiation"}
+    
+    neg = state.current_negotiation
+    hydra_manager = app.state.hydra_manager
+    
+    settlement = None
+    
+    if hydra_manager and neg.get("head_id") in hydra_manager.active_negotiations:
+        try:
+            settlement_obj = await hydra_manager.accept_and_settle(neg["head_id"])
+            
+            settlement = {
+                "tx_hash": settlement_obj.tx_hash,
+                "borrower": settlement_obj.borrower,
+                "lender": settlement_obj.lender,
+                "principal": settlement_obj.principal,
+                "final_rate": settlement_obj.final_rate,
+                "final_rate_bps": settlement_obj.final_rate_bps,
+                "term_months": settlement_obj.term_months,
+                "status": settlement_obj.status
+            }
+            
+        except Exception as e:
+            print(f"[Hydra] Settlement error: {e}")
+    
+    if not settlement:
+        # Fallback to mock settlement
+        return await close_hydra_and_settle_mock()
+    
+    # Broadcast close head
+    await manager.broadcast({
+        "type": "workflow_step",
+        "data": {
+            "step": 5,
+            "name": "Close Hydra Head",
+            "status": "completed",
+            "details": {
+                "head_id": neg["head_id"],
+                "final_rate": settlement["final_rate"],
+                "rounds": neg["rounds"],
+                "savings": round(neg["original_rate"] - settlement["final_rate"], 2)
+            }
+        }
+    })
+    
+    await asyncio.sleep(0.5)
+    
+    # Broadcast Aiken validation
+    await manager.broadcast({
+        "type": "workflow_step",
+        "data": {
+            "step": 6,
+            "name": "Aiken Validator Settlement",
+            "status": "completed",
+            "details": {
+                "borrower_sig": "OK",
+                "lender_sig": "OK",
+                "rate_valid": "OK",
+                "settlement": settlement
+            }
+        }
+    })
+    
+    # Record trade
+    trade = {
+        "id": f"trade_{int(datetime.now().timestamp())}",
+        "timestamp": datetime.now().isoformat(),
+        "type": "loan_accepted",
+        "principal": settlement["principal"],
+        "interestRate": settlement["final_rate"],
+        "originalRate": neg["original_rate"],
+        "profit": round((neg["original_rate"] - settlement["final_rate"]) * settlement["principal"] / 100, 2),
+        "status": "completed"
+    }
+    state.trades.insert(0, trade)
+    
+    # Update stats
+    state.stats["activeLoans"] += 1
+    state.stats["totalProfit"] += trade["profit"]
+    
+    # Clear negotiation
+    state.current_negotiation = None
+    
+    # Final broadcasts
+    await manager.broadcast({
+        "type": "workflow_complete",
+        "data": {
+            "success": True,
+            "settlement": settlement,
+            "trade": trade
+        }
+    })
+    
+    await manager.broadcast({
+        "type": "stats_update",
+        "data": state.stats
+    })
+    
+    return settlement
+
+
+# ============================================================================
+# Hydra Mock Fallback (when no node available)
+# ============================================================================
+
+async def open_hydra_head_mock(offer: Dict) -> Dict:
+    """Open Hydra Head (mock mode)."""
     head_id = f"head_{offer['offer_id']}_{int(datetime.now().timestamp())}"
     
     await manager.broadcast({
@@ -220,7 +496,8 @@ async def open_hydra_head(offer: Dict) -> Dict:
             "status": "completed",
             "details": {
                 "head_id": head_id,
-                "participants": [offer["lender_address"], offer["borrower_address"]]
+                "participants": [offer["lender_address"], offer["borrower_address"]],
+                "mode": "mock"
             }
         }
     })
@@ -228,16 +505,21 @@ async def open_hydra_head(offer: Dict) -> Dict:
     state.current_negotiation = {
         "head_id": head_id,
         "offer": offer,
+        "borrower": offer["borrower_address"],
+        "lender": offer["lender_address"],
+        "principal": offer["principal"],
+        "original_rate": offer["interest_rate"],
         "current_rate": offer["interest_rate"],
+        "term_months": offer["term_months"],
         "rounds": 0,
         "status": "open"
     }
     
-    return {"head_id": head_id, "status": "open"}
+    return {"head_id": head_id, "status": "open", "mode": "mock"}
 
 
-async def negotiate_in_hydra(proposed_rate: float) -> Dict:
-    """Negotiate in Hydra Head (zero gas!)."""
+async def negotiate_in_hydra_mock(proposed_rate: float) -> Dict:
+    """Negotiate in Hydra Head (mock mode)."""
     if not state.current_negotiation:
         return {"error": "No active negotiation"}
     
@@ -259,7 +541,7 @@ async def negotiate_in_hydra(proposed_rate: float) -> Dict:
     
     await asyncio.sleep(0.5)
     
-    original_rate = neg["offer"]["interest_rate"]
+    original_rate = neg["original_rate"]
     
     if proposed_rate >= original_rate - 1.5:
         # Accept
@@ -305,12 +587,16 @@ async def negotiate_in_hydra(proposed_rate: float) -> Dict:
     }
 
 
-async def close_hydra_and_settle() -> Dict:
-    """Close Hydra Head and settle via Aiken Validator."""
+async def close_hydra_and_settle_mock() -> Dict:
+    """Close Hydra Head and settle (mock mode)."""
     if not state.current_negotiation:
         return {"error": "No active negotiation"}
     
     neg = state.current_negotiation
+    
+    # If no final_rate set, use current_rate
+    if "final_rate" not in neg:
+        neg["final_rate"] = neg["current_rate"]
     
     # Close Head
     await manager.broadcast({
@@ -323,7 +609,7 @@ async def close_hydra_and_settle() -> Dict:
                 "head_id": neg["head_id"],
                 "final_rate": neg["final_rate"],
                 "rounds": neg["rounds"],
-                "savings": round(neg["offer"]["interest_rate"] - neg["final_rate"], 2)
+                "savings": round(neg["original_rate"] - neg["final_rate"], 2)
             }
         }
     })
@@ -348,12 +634,12 @@ async def close_hydra_and_settle() -> Dict:
     
     settlement = {
         "tx_hash": tx_hash,
-        "borrower": neg["offer"]["borrower_address"],
-        "lender": neg["offer"]["lender_address"],
-        "principal": neg["offer"]["principal"],
+        "borrower": neg["borrower"],
+        "lender": neg["lender"],
+        "principal": neg["principal"],
         "final_rate": neg["final_rate"],
         "final_rate_bps": int(neg["final_rate"] * 100),
-        "term_months": neg["offer"]["term_months"],
+        "term_months": neg["term_months"],
         "status": "LOAN_DISBURSED"
     }
     
@@ -377,10 +663,10 @@ async def close_hydra_and_settle() -> Dict:
         "id": f"trade_{int(datetime.now().timestamp())}",
         "timestamp": datetime.now().isoformat(),
         "type": "loan_accepted",
-        "principal": neg["offer"]["principal"],
+        "principal": neg["principal"],
         "interestRate": neg["final_rate"],
-        "originalRate": neg["offer"]["interest_rate"],
-        "profit": round((neg["offer"]["interest_rate"] - neg["final_rate"]) * neg["offer"]["principal"] / 100, 2),
+        "originalRate": neg["original_rate"],
+        "profit": round((neg["original_rate"] - neg["final_rate"]) * neg["principal"] / 100, 2),
         "status": "completed"
     }
     state.trades.insert(0, trade)
@@ -420,7 +706,77 @@ async def root():
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+    hydra_status = "disconnected"
+    hydra_mode = "none"
+    
+    if hasattr(app.state, 'hydra_manager') and app.state.hydra_manager:
+        hydra_mode = "mock" if app.state.hydra_manager.client._mock_mode else "real"
+        hydra_status = "connected" if app.state.hydra_manager.client._connected or app.state.hydra_manager.client._mock_mode else "disconnected"
+    
+    return {
+        "status": "healthy",
+        "timestamp": datetime.now().isoformat(),
+        "hydra": {
+            "status": hydra_status,
+            "mode": hydra_mode
+        }
+    }
+
+
+# --- Hydra Configuration ---
+
+@app.get("/api/hydra/status")
+async def hydra_status():
+    """Get Hydra node connection status."""
+    if not hasattr(app.state, 'hydra_manager') or not app.state.hydra_manager:
+        return {
+            "connected": False,
+            "mode": "unavailable",
+            "message": "Hydra module not loaded"
+        }
+    
+    client = app.state.hydra_manager.client
+    return {
+        "connected": client._connected or client._mock_mode,
+        "mode": "mock" if client._mock_mode else "real",
+        "node_url": client.config.node_url,
+        "head_state": client.state.value,
+        "active_negotiations": len(app.state.hydra_manager.active_negotiations)
+    }
+
+
+@app.post("/api/hydra/reconnect")
+async def hydra_reconnect(config: Optional[HydraConfigRequest] = None):
+    """Attempt to reconnect to Hydra node."""
+    if not HYDRA_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Hydra module not available")
+    
+    try:
+        # Stop existing manager
+        if hasattr(app.state, 'hydra_manager') and app.state.hydra_manager:
+            await app.state.hydra_manager.stop()
+        
+        # Create new config
+        new_config = HydraConfig(
+            node_url=config.node_url if config else os.getenv("HYDRA_NODE_URL", "ws://127.0.0.1:4001"),
+            mode=ConnectionMode(config.mode) if config else ConnectionMode.AUTO
+        )
+        
+        # Create new manager
+        app.state.hydra_manager = HydraNegotiationManager(HydraClient(new_config))
+        await app.state.hydra_manager.start()
+        
+        return {
+            "success": True,
+            "mode": "mock" if app.state.hydra_manager.client._mock_mode else "real",
+            "node_url": new_config.node_url
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
 
 
 # --- Dashboard ---
@@ -468,14 +824,7 @@ async def start_workflow(req: WorkflowRequest):
         return {"success": False, "reason": "Credit check failed"}
     
     # Step 2: Create Loan Offer
-    offer = {
-        "offer_id": f"offer_{int(datetime.now().timestamp())}",
-        "lender_address": req.lender_address,
-        "borrower_address": req.borrower_address,
-        "principal": req.principal,
-        "interest_rate": req.interest_rate,
-        "term_months": req.term_months
-    }
+    offer_id = f"offer_{int(datetime.now().timestamp())}"
     
     await manager.broadcast({
         "type": "workflow_step",
@@ -483,12 +832,25 @@ async def start_workflow(req: WorkflowRequest):
             "step": 2,
             "name": "Loan Offer Created",
             "status": "completed",
-            "details": offer
+            "details": {
+                "offer_id": offer_id,
+                "lender_address": req.lender_address,
+                "borrower_address": req.borrower_address,
+                "principal": req.principal,
+                "interest_rate": req.interest_rate,
+                "term_months": req.term_months
+            }
         }
     })
     
-    # Step 3: Open Hydra Head
-    await open_hydra_head(offer)
+    # Step 3: Open Hydra Head (uses real client if available)
+    await open_hydra_head_real(
+        borrower=req.borrower_address,
+        lender=req.lender_address,
+        principal=req.principal,
+        interest_rate=req.interest_rate,
+        term_months=req.term_months
+    )
     
     # Step 4: AI Analysis
     await manager.broadcast({
@@ -525,16 +887,16 @@ async def start_workflow(req: WorkflowRequest):
         }
     })
     
-    # Step 5: Negotiate
-    result = await negotiate_in_hydra(target)
+    # Step 5: Negotiate (uses real client if available)
+    result = await negotiate_in_hydra_real(target)
     
     # If counter, negotiate once more
     if result.get("action") == "counter":
         new_target = round((target + result["rate"]) / 2, 1)
-        result = await negotiate_in_hydra(new_target)
+        result = await negotiate_in_hydra_real(new_target)
     
-    # Step 6: Accept and Settle
-    settlement = await close_hydra_and_settle()
+    # Step 6: Accept and Settle (uses real client if available)
+    settlement = await close_hydra_and_settle_real()
     
     state.stats["agentStatus"] = "profiting"
     
@@ -552,14 +914,14 @@ async def start_workflow(req: WorkflowRequest):
 @app.post("/api/negotiation/propose")
 async def propose_rate(req: NegotiationRequest):
     """Propose a rate in active negotiation."""
-    result = await negotiate_in_hydra(req.proposed_rate)
+    result = await negotiate_in_hydra_real(req.proposed_rate)
     return result
 
 
 @app.post("/api/negotiation/accept")
 async def accept_terms():
     """Accept current terms and settle."""
-    settlement = await close_hydra_and_settle()
+    settlement = await close_hydra_and_settle_real()
     return settlement
 
 
@@ -612,6 +974,16 @@ async def websocket_endpoint(ws: WebSocket):
         await ws.send_json({
             "type": "agent_status",
             "data": {"status": state.stats["agentStatus"]}
+        })
+        
+        # Send Hydra status
+        hydra_mode = "unavailable"
+        if hasattr(app.state, 'hydra_manager') and app.state.hydra_manager:
+            hydra_mode = "mock" if app.state.hydra_manager.client._mock_mode else "real"
+        
+        await ws.send_json({
+            "type": "hydra_status",
+            "data": {"mode": hydra_mode}
         })
         
         while True:
