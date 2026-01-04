@@ -3,6 +3,8 @@
  * Validates and sanitizes user inputs before submission
  */
 
+import type { Stablecoin } from '@/components/dashboard/StablecoinSelector';
+
 /**
  * Sanitize string input - remove potentially dangerous characters
  */
@@ -105,11 +107,12 @@ export function validateCreditScore(score: number | string): { valid: boolean; v
 export interface LoanFormData {
   role: 'borrower' | 'lender';
   walletAddress: string;
-  stablecoin: string;
+  stablecoin: Stablecoin;
   principal: number;
   interest_rate: number;
   term_months: number;
   credit_score?: number;
+  autoConfirm: boolean;
   borrower_address?: string;
   lender_address?: string;
 }
@@ -147,11 +150,11 @@ export function validateLoanFormData(data: Partial<LoanFormData>): {
   }
   
   // Validate stablecoin
-  const validStablecoins = ['USDT', 'USDC', 'DAI', 'USDD', 'TUSD', 'BUSD'];
-  if (!data.stablecoin || !validStablecoins.includes(data.stablecoin.toUpperCase())) {
+  const validStablecoins: Stablecoin[] = ['USDT', 'USDC', 'DAI', 'USDD', 'TUSD', 'BUSD'];
+  if (!data.stablecoin || !validStablecoins.includes(data.stablecoin.toUpperCase() as Stablecoin)) {
     errors.push('Invalid stablecoin');
   } else {
-    sanitized.stablecoin = data.stablecoin.toUpperCase();
+    sanitized.stablecoin = data.stablecoin.toUpperCase() as Stablecoin;
   }
   
   // Validate principal
@@ -187,6 +190,9 @@ export function validateLoanFormData(data: Partial<LoanFormData>): {
       sanitized.credit_score = scoreResult.value;
     }
   }
+  
+  // Validate autoConfirm (default to false if not provided)
+  sanitized.autoConfirm = data.autoConfirm === true;
   
   if (errors.length > 0) {
     return { valid: false, errors };

@@ -43,6 +43,7 @@ interface UseWalletReturn {
 }
 
 const STORAGE_KEY = 'lendora_wallet';
+const DISCONNECT_FLAG = 'lendora_wallet_disconnected';
 
 export function useWallet(): UseWalletReturn {
     const [installedWallets, setInstalledWallets] = useState<WalletInfo[]>([]);
@@ -53,6 +54,16 @@ export function useWallet(): UseWalletReturn {
     const [isConnecting, setIsConnecting] = useState(false);
     const [isConnected, setIsConnected] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // Define refreshBalance early so it can be used in other effects
+    const refreshBalance = useCallback(async () => {
+        const state = await getWalletState();
+        if (state) {
+            setBalance(state.balance);
+            setNetwork(state.network);
+            setChainId(state.chainId);
+        }
+    }, []);
 
     // Discover installed wallets on mount
     useEffect(() => {
@@ -81,6 +92,11 @@ export function useWallet(): UseWalletReturn {
     useEffect(() => {
         const unsubscribe = subscribeToWalletEvents(
             (accounts) => {
+                // Respect disconnect flag - don't auto-reconnect if user manually disconnected
+                if (localStorage.getItem(DISCONNECT_FLAG) === 'true') {
+                    return;
+                }
+                
                 if (accounts.length === 0) {
                     // User disconnected
                     setIsConnected(false);
@@ -88,12 +104,18 @@ export function useWallet(): UseWalletReturn {
                     setBalance('0');
                     localStorage.removeItem(STORAGE_KEY);
                 } else {
+                    setIsConnected(true);
                     setAddress(accounts[0]);
                     // Refresh balance on account change
                     refreshBalance();
                 }
             },
             (newChainId) => {
+                // Respect disconnect flag - don't auto-reconnect if user manually disconnected
+                if (localStorage.getItem(DISCONNECT_FLAG) === 'true') {
+                    return;
+                }
+                
                 const chainIdNum = parseInt(newChainId, 16);
                 setChainId(chainIdNum);
                 // Refresh balance on chain change
@@ -112,11 +134,16 @@ export function useWallet(): UseWalletReturn {
         );
 
         return unsubscribe;
-    }, []);
+    }, [refreshBalance]);
 
     // Check if already connected on mount and periodically
     useEffect(() => {
         const checkConnection = async () => {
+            // Don't auto-reconnect if user manually disconnected
+            if (localStorage.getItem(DISCONNECT_FLAG) === 'true') {
+                return;
+            }
+
             try {
                 const state = await getWalletState();
                 if (state && state.connected && state.address) {
@@ -135,6 +162,7 @@ export function useWallet(): UseWalletReturn {
                             localStorage.setItem(STORAGE_KEY, 'metamask');
                         }
                     }
+                    // DO NOT clear disconnect flag here - only clear it when user explicitly connects
                 }
             } catch (err) {
                 console.error('[useWallet] Error checking connection:', err);
@@ -146,7 +174,7 @@ export function useWallet(): UseWalletReturn {
         // Check periodically to catch connections approved in other tabs
         // Only check if not already connected to avoid unnecessary requests
         const interval = setInterval(() => {
-            if (!isConnected) {
+            if (!isConnected && localStorage.getItem(DISCONNECT_FLAG) !== 'true') {
                 checkConnection();
             }
         }, 2000);
@@ -156,6 +184,8 @@ export function useWallet(): UseWalletReturn {
     const connect = useCallback(async (walletName: WalletName) => {
         setIsConnecting(true);
         setError(null);
+        // Clear disconnect flag when user explicitly connects
+        localStorage.removeItem(DISCONNECT_FLAG);
 
         try {
             console.log(`[useWallet] Attempting to connect to ${walletName}...`);
@@ -190,15 +220,8 @@ export function useWallet(): UseWalletReturn {
         setChainId(null);
         setError(null);
         localStorage.removeItem(STORAGE_KEY);
-    }, []);
-
-    const refreshBalance = useCallback(async () => {
-        const state = await getWalletState();
-        if (state) {
-            setBalance(state.balance);
-            setNetwork(state.network);
-            setChainId(state.chainId);
-        }
+        // Set flag to prevent auto-reconnection
+        localStorage.setItem(DISCONNECT_FLAG, 'true');
     }, []);
 
     return {

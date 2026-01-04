@@ -1,62 +1,80 @@
 /**
  * Lendora AI - Transactions Page
- * Shows transaction history
+ * Shows transaction history from global state + mock data
  */
 
-import { useEffect, useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { motion } from 'framer-motion';
 import { useWallet } from '@/hooks/useWallet';
+import { useLendora, Transaction as LendoraTransaction } from '@/context/LendoraContext';
+import { useLendoraData } from '@/hooks/useLendoraData';
 import { ArrowDown, ArrowUp, Search, ExternalLink, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 
-interface Transaction {
+// Unified transaction type for display
+interface DisplayTransaction {
     id: string;
-    type: 'borrow' | 'lend' | 'repay' | 'interest_payment' | 'withdraw';
+    type: 'borrow' | 'lend' | 'repay' | 'withdraw' | 'interest_payment' | 'supply' | 'liquidation';
     amount: number;
+    asset: string;
     stablecoin: string;
-    status: 'pending' | 'completed' | 'failed';
+    status: 'completed' | 'pending' | 'failed';
     timestamp: string;
     txHash?: string;
     description: string;
 }
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-
 export default function Transactions() {
-    const { address, isConnected, network } = useWallet();
-    const [transactions, setTransactions] = useState<Transaction[]>([]);
-    const [loading, setLoading] = useState(true);
+    const { isConnected } = useWallet();
+    const { transactions: contextTransactions } = useLendora();
+    const { transactions: mockTransactions, loading: mockLoading } = useLendoraData();
     const [searchQuery, setSearchQuery] = useState('');
 
-    useEffect(() => {
-        if (isConnected && address) {
-            fetchTransactions();
-        } else {
-            setLoading(false);
-        }
-    }, [isConnected, address]);
+    // Merge context transactions with mock transactions
+    const allTransactions = useMemo((): DisplayTransaction[] => {
+        // Convert context transactions to display format
+        const fromContext: DisplayTransaction[] = contextTransactions.map(tx => ({
+            id: tx.id,
+            type: tx.type,
+            amount: tx.amount,
+            asset: tx.asset,
+            stablecoin: tx.stablecoin || tx.asset,
+            status: tx.status,
+            timestamp: tx.timestamp,
+            txHash: tx.txHash,
+            description: tx.description,
+        }));
 
-    const fetchTransactions = async () => {
-        try {
-            const response = await fetch(`${API_URL}/api/transactions/${address}`);
-            if (response.ok) {
-                const data = await response.json();
-                setTransactions(data.transactions || []);
-            }
-        } catch (error) {
-            console.error('Failed to fetch transactions:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
+        // Convert mock transactions to display format
+        const fromMock: DisplayTransaction[] = mockTransactions.map(tx => ({
+            id: tx.id,
+            type: tx.type === 'supply' ? 'lend' : tx.type as DisplayTransaction['type'],
+            amount: tx.amount,
+            asset: tx.asset,
+            stablecoin: tx.asset,
+            status: tx.status,
+            timestamp: tx.timestamp,
+            txHash: tx.txHash,
+            description: tx.description,
+        }));
 
-    const filteredTransactions = transactions.filter(tx =>
+        // Merge and sort by timestamp (newest first)
+        const merged = [...fromContext, ...fromMock];
+        return merged.sort((a, b) => 
+            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+        );
+    }, [contextTransactions, mockTransactions]);
+
+    const loading = mockLoading;
+
+    const filteredTransactions = allTransactions.filter(tx =>
         tx.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
         tx.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        tx.txHash?.toLowerCase().includes(searchQuery.toLowerCase())
+        tx.txHash?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        tx.asset.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     const getTransactionIcon = (type: string) => {
@@ -64,8 +82,10 @@ export default function Transactions() {
             case 'borrow':
             case 'repay':
             case 'interest_payment':
+            case 'liquidation':
                 return <ArrowDown className="w-5 h-5 text-red-500" />;
             case 'lend':
+            case 'supply':
             case 'withdraw':
                 return <ArrowUp className="w-5 h-5 text-green-500" />;
             default:
@@ -86,6 +106,28 @@ export default function Transactions() {
         }
     };
 
+    const getTransactionColor = (type: string) => {
+        switch (type) {
+            case 'lend':
+            case 'supply':
+            case 'withdraw':
+                return 'text-green-500';
+            default:
+                return 'text-red-500';
+        }
+    };
+
+    const getTransactionPrefix = (type: string) => {
+        switch (type) {
+            case 'lend':
+            case 'supply':
+            case 'withdraw':
+                return '+';
+            default:
+                return '-';
+        }
+    };
+
     if (!isConnected) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
@@ -102,17 +144,21 @@ export default function Transactions() {
 
     return (
         <div className="space-y-6">
-            {/* Page Header */}
-            <div>
-                <h1 className="text-3xl font-bold mb-2 text-foreground">Transactions</h1>
-                <p className="text-muted-foreground">View your complete transaction history</p>
+            {/* Header with count */}
+            <div className="flex items-center justify-between">
+                <div>
+                    <h2 className="text-2xl font-bold text-foreground">Transaction History</h2>
+                    <p className="text-muted-foreground">
+                        {filteredTransactions.length} transaction{filteredTransactions.length !== 1 ? 's' : ''}
+                    </p>
+                </div>
             </div>
 
             {/* Search */}
             <div className="relative">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                    placeholder="Search transactions..."
+                    placeholder="Search transactions by type, asset, or description..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
@@ -134,11 +180,12 @@ export default function Transactions() {
                 </Card>
             ) : (
                 <div className="space-y-3">
-                    {filteredTransactions.map((tx) => (
+                    {filteredTransactions.map((tx, index) => (
                         <motion.div
                             key={tx.id}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.05 }}
                         >
                             <Card className="glass-card p-5 hover:border-primary/50 transition-colors">
                                 <div className="flex items-center justify-between">
@@ -160,12 +207,8 @@ export default function Transactions() {
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <p className={`font-bold text-lg ${
-                                            tx.type === 'lend' || tx.type === 'withdraw' 
-                                                ? 'text-green-500' 
-                                                : 'text-red-500'
-                                        }`}>
-                                            {tx.type === 'lend' || tx.type === 'withdraw' ? '+' : '-'}
+                                        <p className={`font-bold text-lg ${getTransactionColor(tx.type)}`}>
+                                            {getTransactionPrefix(tx.type)}
                                             {tx.amount.toLocaleString()} {tx.stablecoin}
                                         </p>
                                         {tx.txHash && (
@@ -173,7 +216,7 @@ export default function Transactions() {
                                                 href={`https://etherscan.io/tx/${tx.txHash}`}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="text-xs text-primary hover:underline flex items-center gap-1 mt-1"
+                                                className="text-xs text-primary hover:underline flex items-center gap-1 mt-1 justify-end"
                                             >
                                                 View on Etherscan
                                                 <ExternalLink className="w-3 h-3" />

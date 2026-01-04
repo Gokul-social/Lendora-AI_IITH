@@ -8,7 +8,10 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { WalletConnectionWizard } from '@/components/dashboard/WalletConnectionWizard';
 import { LoanConfigurationForm } from '@/components/dashboard/LoanConfigurationForm';
+import { DashboardStats } from '@/components/dashboard/DashboardStats';
 import { CheckCircle2, Wallet, Settings, ArrowRight, ArrowLeft } from 'lucide-react';
+import { useLendora } from '@/context/LendoraContext';
+import { toast } from '@/components/ui/sonner';
 
 type Role = 'borrower' | 'lender' | null;
 type Step = 1 | 2 | 3;
@@ -31,6 +34,7 @@ export default function DashboardLayout() {
     const [role, setRole] = useState<Role>(null);
     const [walletAddress, setWalletAddress] = useState<string>('');
     const [formData, setFormData] = useState<Partial<LoanFormData>>({});
+    const { addLoan } = useLendora();
 
     const handleRoleSelect = (selectedRole: Role) => {
         setRole(selectedRole);
@@ -82,6 +86,27 @@ export default function DashboardLayout() {
 
             const result = await response.json();
             if (result.success) {
+                // Add loan to global state
+                const loanType = finalData.role === 'borrower' ? 'borrow' : 'lend';
+                const newLoan = addLoan({
+                    asset: finalData.stablecoin || 'USDT',
+                    amount: finalData.principal || 0,
+                    type: loanType,
+                    apy: finalData.interestRate || 8.5,
+                    status: 'active',
+                    termMonths: finalData.termMonths || 12,
+                    walletAddress: finalData.walletAddress || '',
+                    counterpartyAddress: loanType === 'borrow' 
+                        ? finalData.lenderAddress 
+                        : finalData.borrowerAddress,
+                });
+
+                // Show success toast
+                toast.success('Loan Created Successfully!', {
+                    description: `Your ${loanType === 'borrow' ? 'borrowed' : 'lent'} loan of ${finalData.principal?.toLocaleString()} ${finalData.stablecoin || 'USDT'} has been created.`,
+                    duration: 5000,
+                });
+
                 // Reset wizard after successful submission
                 setTimeout(() => {
                     setCurrentStep(1);
@@ -92,13 +117,49 @@ export default function DashboardLayout() {
             }
         } catch (err) {
             console.error('Failed to submit loan:', err);
+            
+            // Even if API fails, add loan to local state for demo purposes
+            const loanType = finalData.role === 'borrower' ? 'borrow' : 'lend';
+            addLoan({
+                asset: finalData.stablecoin || 'USDT',
+                amount: finalData.principal || 0,
+                type: loanType,
+                apy: finalData.interestRate || 8.5,
+                status: 'active',
+                termMonths: finalData.termMonths || 12,
+                walletAddress: finalData.walletAddress || '',
+                counterpartyAddress: loanType === 'borrow' 
+                    ? finalData.lenderAddress 
+                    : finalData.borrowerAddress,
+            });
+
+            // Show success toast (since we still added to local state)
+            toast.success('Loan Created Locally', {
+                description: `Your ${loanType === 'borrow' ? 'borrowed' : 'lent'} loan of ${finalData.principal?.toLocaleString()} ${finalData.stablecoin || 'USDT'} has been saved.`,
+                duration: 5000,
+            });
+
+            // Reset wizard
+            setTimeout(() => {
+                setCurrentStep(1);
+                setRole(null);
+                setWalletAddress('');
+                setFormData({});
+            }, 2000);
         }
     };
 
     return (
-        <div className="w-full flex items-center justify-center p-4 sm:p-6 lg:p-8 min-h-full">
-            <div className="w-full max-w-2xl mx-auto">
-                {/* Step Indicator */}
+        <div className="w-full space-y-8">
+            {/* Dashboard Stats */}
+            <div className="w-full">
+                <DashboardStats />
+            </div>
+
+            {/* Loan Creation Wizard */}
+            <div className="w-full flex items-center justify-center">
+                <div className="w-full max-w-2xl mx-auto">
+                    {/* Step Indicator */}
                 <div className="flex items-center justify-center mb-8 gap-4">
                     <div className={`flex items-center gap-2 ${currentStep >= 1 ? 'text-foreground' : 'text-muted-foreground'}`}>
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
@@ -225,6 +286,7 @@ export default function DashboardLayout() {
                         </div>
                     )}
                 </Card>
+                </div>
             </div>
         </div>
     );

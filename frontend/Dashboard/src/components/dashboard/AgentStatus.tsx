@@ -6,7 +6,7 @@ import { Brain, MessageCircle, Activity, CheckCircle2, AlertCircle, Bot, Search,
 import { useState } from 'react';
 
 interface AgentStatusProps {
-  status: 'idle' | 'negotiating' | 'analyzing';
+  status: 'idle' | 'negotiating' | 'analyzing' | 'completed';
   task?: string;
   conversation?: {
     conversation_id: string;

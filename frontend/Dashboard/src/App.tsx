@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { LendoraProvider } from "@/context/LendoraContext";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import LoginGate from "./pages/LoginGate";
@@ -12,8 +13,9 @@ import DashboardLayout from "./pages/DashboardLayout";
 import Portfolio from "./pages/Portfolio";
 import Loans from "./pages/Loans";
 import Transactions from "./pages/Transactions";
+import Markets from "./pages/Markets";
 import Settings from "./pages/Settings";
-import { MainLayout } from "./components/layout/MainLayout";
+import { AppLayout } from "./components/layout/AppLayout";
 
 // Configure React Query
 const queryClient = new QueryClient({
@@ -29,23 +31,26 @@ const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
+        <LendoraProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
               <Route path="/" element={<LoginGate />} />
-              <Route path="/dashboard" element={<MainLayout><DashboardLayout /></MainLayout>} />
-              <Route path="/portfolio" element={<MainLayout><Portfolio /></MainLayout>} />
-              <Route path="/loans" element={<MainLayout><Loans /></MainLayout>} />
-              <Route path="/transactions" element={<MainLayout><Transactions /></MainLayout>} />
-              <Route path="/settings" element={<MainLayout><Settings /></MainLayout>} />
+              <Route path="/dashboard" element={<AppLayout><DashboardLayout /></AppLayout>} />
+              <Route path="/portfolio" element={<AppLayout><Portfolio /></AppLayout>} />
+              <Route path="/loans" element={<AppLayout><Loans /></AppLayout>} />
+              <Route path="/transactions" element={<AppLayout><Transactions /></AppLayout>} />
+              <Route path="/markets" element={<AppLayout><Markets /></AppLayout>} />
+              <Route path="/settings" element={<AppLayout><Settings /></AppLayout>} />
               <Route path="/legacy" element={<Index />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </LendoraProvider>
       </ThemeProvider>
     </QueryClientProvider>
   </ErrorBoundary>

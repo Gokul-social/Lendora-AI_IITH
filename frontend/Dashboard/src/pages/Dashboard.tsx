@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Logo } from '@/components/ui/Logo';
 import { FluidBackground } from '@/components/ui/FluidBackground';
 import { InteractiveCharts } from '@/components/dashboard/InteractiveCharts';
 import { WalletConnection } from '@/components/dashboard/WalletConnection';
@@ -61,13 +62,8 @@ export default function Dashboard() {
                     animate={{ x: 0, opacity: 1 }}
                     className="w-64 glass-panel border-r border-border hidden md:flex flex-col p-6 fixed h-full z-10"
                 >
-                    <div className="flex items-center gap-3 mb-10">
-                        <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center border border-primary/30">
-                            <div className="w-6 h-6 bg-primary rounded" />
-                        </div>
-                        <h1 className="text-xl font-bold text-foreground">
-                            Lendora AI
-                        </h1>
+                    <div className="mb-10">
+                        <Logo size="md" showText={true} />
                     </div>
 
                     <nav className="space-y-2 flex-1">
@@ -104,9 +100,9 @@ export default function Dashboard() {
                 <main className="flex-1 md:ml-64 p-8">
                     {/* Header */}
                     <header className="flex justify-between items-center mb-8">
-                        <div>
-                            <h2 className="text-3xl font-bold mb-2 text-foreground">Dashboard</h2>
-                            <p className="text-muted-foreground text-base">Welcome back, Borrower</p>
+                        <div className="space-y-1">
+                            <h2 className="text-4xl font-bold text-foreground">Dashboard</h2>
+                            <p className="text-muted-foreground text-lg">Welcome back, Borrower</p>
                         </div>
 
                         <div className="flex items-center gap-4">

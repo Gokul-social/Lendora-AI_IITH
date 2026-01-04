@@ -66,7 +66,7 @@ function TradeCard({ trade }: { trade: Trade; index: number }) {
     // Kasane Effect: 3D tilt based on scroll position
     const rotateX = useTransform(scrollYProgress, [0, 0.5, 1], [15, 0, -15]);
     const opacity = useTransform(scrollYProgress, [0, 0.3, 0.7, 1], [0.3, 1, 1, 0.3]);
-    const blur = useTransform(scrollYProgress, [0, 0.3, 0.7, 1], (v) => {
+    const blur = useTransform(scrollYProgress, (v: number) => {
         const blurAmount = v < 0.3 ? 4 * (1 - v / 0.3) : v > 0.7 ? 4 * ((v - 0.7) / 0.3) : 0;
         return blurAmount > 0.1 ? `blur(${blurAmount}px)` : 'none';
     });

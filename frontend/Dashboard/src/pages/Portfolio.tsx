@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import { useWallet } from '@/hooks/useWallet';
+import { useLendoraData } from '@/hooks/useLendoraData';
 import { Wallet, ArrowDown, ArrowUp, TrendingUp, DollarSign, AlertCircle } from 'lucide-react';
 import CountUp from 'react-countup';
 
@@ -20,10 +21,9 @@ interface PortfolioStats {
     totalInterestEarned: number;
 }
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-
 export default function Portfolio() {
     const { address, balance, isConnected, network } = useWallet();
+    const { dashboard, loading: dataLoading } = useLendoraData();
     const [stats, setStats] = useState<PortfolioStats>({
         totalBorrowed: 0,
         totalLent: 0,
@@ -35,30 +35,21 @@ export default function Portfolio() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (isConnected && address) {
-            fetchPortfolioData();
-        } else {
+        if (dashboard) {
+            // Use mock data from useLendoraData
+            setStats({
+                totalBorrowed: dashboard.totalBorrowed,
+                totalLent: dashboard.totalSupplied,
+                activeLoansBorrowed: 2,
+                activeLoansLent: 3,
+                totalInterestPaid: 125.50,
+                totalInterestEarned: 342.75,
+            });
+            setLoading(false);
+        } else if (!dataLoading) {
             setLoading(false);
         }
-    }, [isConnected, address]);
-
-    const fetchPortfolioData = async () => {
-        try {
-            // Fetch actual portfolio data from API
-            const response = await fetch(`${API_URL}/api/portfolio/${address}`);
-            if (response.ok) {
-                const data = await response.json();
-                setStats(data);
-            } else {
-                // If endpoint doesn't exist yet, use empty stats
-                console.log('Portfolio API not available, using empty stats');
-            }
-        } catch (error) {
-            console.error('Failed to fetch portfolio data:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
+    }, [dashboard, dataLoading]);
 
     const walletBalance = parseFloat(balance || '0');
     const netPosition = stats.totalLent - stats.totalBorrowed;
@@ -79,12 +70,6 @@ export default function Portfolio() {
 
     return (
         <div className="space-y-6">
-            {/* Page Header */}
-            <div>
-                <h1 className="text-3xl font-bold mb-2 text-foreground">Portfolio</h1>
-                <p className="text-muted-foreground">Your account overview and balances</p>
-            </div>
-
             {/* Wallet Balance Card */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -223,7 +208,7 @@ export default function Portfolio() {
                 transition={{ delay: 0.5 }}
             >
                 <Card className="glass-card p-6">
-                    <h2 className="text-xl font-bold mb-4 text-foreground">Account Summary</h2>
+                    <h2 className="text-xl font-semibold mb-4 text-foreground">Account Summary</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-3">
                             <div className="flex justify-between items-center p-3 rounded-lg bg-secondary/30">

@@ -13,27 +13,15 @@ import { WalletConnection } from './WalletConnection';
 import { StablecoinSelector, Stablecoin } from './StablecoinSelector';
 import { Play, Loader2, User, Building2, Zap, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { validateLoanFormData } from '@/lib/validation';
+import { validateLoanFormData, LoanFormData } from '@/lib/validation';
 import { useToast } from '@/hooks/use-toast';
 
 export type UserRole = 'borrower' | 'lender';
+export type { LoanFormData };
 
 interface EnhancedLoanFormProps {
     onSubmit: (data: LoanFormData) => Promise<void>;
     isSubmitting?: boolean;
-}
-
-export interface LoanFormData {
-    role: UserRole;
-    walletAddress: string;
-    stablecoin: Stablecoin;
-    principal: number;
-    interest_rate: number;
-    term_months: number;
-    credit_score?: number;
-    autoConfirm: boolean;
-    borrower_address?: string;
-    lender_address?: string;
 }
 
 export function EnhancedLoanForm({ onSubmit, isSubmitting = false }: EnhancedLoanFormProps) {

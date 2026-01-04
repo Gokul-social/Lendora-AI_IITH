@@ -14,12 +14,17 @@ class WebSocketManager {
     private reconnectDelay = 1000;
 
     constructor(url?: string) {
-        // Use environment variable or construct from API URL
+        // Priority: explicit URL > VITE_WS_URL > derived from VITE_API_URL > localhost
         if (url) {
             this.url = url;
+        } else if (import.meta.env.VITE_WS_URL) {
+            // Use explicit WebSocket URL if provided
+            const wsUrl = import.meta.env.VITE_WS_URL;
+            this.url = wsUrl.endsWith('/ws') ? wsUrl : `${wsUrl}/ws`;
         } else {
+            // Derive from API URL
             const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-            // Convert http:// to ws:// and add /ws
+            // Convert http(s):// to ws(s):// and add /ws
             this.url = apiUrl.replace(/^http/, 'ws') + '/ws';
         }
     }

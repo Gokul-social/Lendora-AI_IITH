@@ -55,6 +55,11 @@ All colors MUST be HSL.
     transform: translateY(-1px);
   }
 
+  .glass-panel {
+    /* Alias for glass-card for backward compatibility */
+    @apply glass-card;
+  }
+
   .glass-card-glow {
     @apply glass-card;
 
@@ -219,6 +224,142 @@ All colors MUST be HSL.
     @apply border-primary/50 shadow-lg;
     transform: translateY(-2px);
   }
+
+  /* Pixelated Space Theme */
+  .pixelated {
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+  }
+
+  .pixel-border {
+    border-style: solid;
+    border-width: 2px;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+  }
+
+  .space-bg {
+    background: radial-gradient(circle at center, #1a0b2e 0%, #09090b 100%);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .space-bg::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+      repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255, 255, 255, 0.03) 2px, rgba(255, 255, 255, 0.03) 4px),
+      repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(255, 255, 255, 0.03) 2px, rgba(255, 255, 255, 0.03) 4px);
+    pointer-events: none;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+  }
+
+  @keyframes pixel-float {
+    0%, 100% {
+      transform: translateY(0px) translateX(0px);
+    }
+    25% {
+      transform: translateY(-10px) translateX(5px);
+    }
+    50% {
+      transform: translateY(-20px) translateX(0px);
+    }
+    75% {
+      transform: translateY(-10px) translateX(-5px);
+    }
+  }
+
+  @keyframes pixel-glow {
+    0%, 100% {
+      box-shadow: 
+        0 0 5px rgba(100, 50, 255, 0.5),
+        0 0 10px rgba(100, 50, 255, 0.3),
+        inset 0 0 5px rgba(100, 50, 255, 0.2);
+    }
+    50% {
+      box-shadow: 
+        0 0 10px rgba(100, 50, 255, 0.8),
+        0 0 20px rgba(100, 50, 255, 0.5),
+        inset 0 0 10px rgba(100, 50, 255, 0.3);
+    }
+  }
+
+  @keyframes pixel-shimmer {
+    0% {
+      background-position: -100% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
+  .pixel-glow {
+    animation: pixel-glow 3s ease-in-out infinite;
+  }
+
+  .pixel-shimmer {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.1) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: pixel-shimmer 2s infinite;
+  }
+
+  /* Button shimmer effect for cyber-DeFi theme */
+  .button-shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .button-shimmer::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.2) 50%,
+      transparent 100%
+    );
+    animation: button-shimmer 3s infinite;
+  }
+
+  @keyframes button-shimmer {
+    0% {
+      left: -100%;
+    }
+    100% {
+      left: 100%;
+    }
+  }
+
+  /* Glassmorphism button style */
+  .glass-button {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+  }
+
+  .glass-button:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
 }
 
 @layer base {
@@ -228,6 +369,23 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Standardized Typography */
+  h1 {
+    @apply text-2xl font-bold text-foreground;
+  }
+
+  h2 {
+    @apply text-xl font-semibold text-foreground;
+  }
+
+  h3 {
+    @apply text-lg font-semibold text-foreground;
+  }
+
+  h4 {
+    @apply text-base font-semibold text-foreground;
   }
 }
 

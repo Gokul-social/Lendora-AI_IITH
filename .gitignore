@@ -61,3 +61,4 @@ frontend/Dashboard/dist/
 *.lock
 bun.lockb
 package-lock.json
+.vercel

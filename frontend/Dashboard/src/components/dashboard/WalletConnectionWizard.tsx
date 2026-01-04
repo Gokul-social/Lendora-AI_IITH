@@ -32,12 +32,14 @@ export function WalletConnectionWizard({ onConnect, role }: WalletConnectionWiza
     const [manualAddress, setManualAddress] = useState('');
     const [isManualMode, setIsManualMode] = useState(false);
     const [retryCount, setRetryCount] = useState(0);
+    const [localError, setLocalError] = useState<string | null>(null);
     const hasConnectedRef = useRef(false);
-    const connectionAttemptRef = useRef<string | null>(null);
+    const connectionAttemptRef = useRef<WalletName | null>(null);
 
     const handleConnect = async (walletName: WalletName) => {
         connectionAttemptRef.current = walletName;
         setRetryCount(0);
+        setLocalError(null);
         try {
             await connect(walletName);
         } catch (err) {
@@ -89,7 +91,7 @@ export function WalletConnectionWizard({ onConnect, role }: WalletConnectionWiza
                 }
             } else {
                 // Not connected, show message
-                setError('No connection found. Please click MetaMask button to connect.');
+                setLocalError('No connection found. Please click MetaMask button to connect.');
             }
         } catch (err) {
             console.error('Check connection error:', err);

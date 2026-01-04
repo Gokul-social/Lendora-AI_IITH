@@ -116,16 +116,29 @@ export function WalletConnection({ onAddressChange, defaultAddress }: WalletConn
                         </Button>
                     </div>
 
-                    <div className="space-y-2">
-                        <div>
-                            <Label className="text-xs text-foreground/80 font-medium">Address</Label>
-                            <div className="flex items-center gap-2 mt-1">
+                    <div className="space-y-4">
+                        {/* Balance and Network */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                                <Label className="text-xs font-medium text-muted-foreground">Balance</Label>
+                                <p className="text-base font-semibold text-foreground">{balance} ETH</p>
+                            </div>
+                            <div className="space-y-1.5">
+                                <Label className="text-xs font-medium text-muted-foreground">Network</Label>
+                                <p className="text-base font-semibold text-foreground">{network}</p>
+                            </div>
+                        </div>
+
+                        {/* Address */}
+                        <div className="space-y-1.5">
+                            <Label className="text-xs font-medium text-muted-foreground">Address</Label>
+                            <div className="flex items-center gap-2">
                                 <Input
                                     value={isValidAddress(currentAddress) 
                                         ? currentShortAddress 
                                         : 'Invalid address format'}
                                     readOnly
-                                    className={`font-mono text-sm bg-background/50 ${
+                                    className={`font-mono text-sm bg-background/50 flex-1 ${
                                         isValidAddress(currentAddress)
                                             ? 'text-foreground'
                                             : 'text-red-500'
@@ -134,6 +147,7 @@ export function WalletConnection({ onAddressChange, defaultAddress }: WalletConn
                                 <Button
                                     variant="ghost"
                                     size="icon"
+                                    className="flex-shrink-0"
                                     onClick={copyAddress}
                                     disabled={!isValidAddress(currentAddress)}
                                 >
@@ -151,16 +165,15 @@ export function WalletConnection({ onAddressChange, defaultAddress }: WalletConn
                             )}
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2">
-                            <div>
-                                <Label className="text-xs text-foreground/80 font-medium">Balance</Label>
-                                <p className="font-semibold text-foreground mt-0.5">{balance} ETH</p>
+                        {/* Active Address (Full) */}
+                        {currentAddress && isValidAddress(currentAddress) && (
+                            <div className="space-y-1.5 pt-2 border-t border-border">
+                                <Label className="text-xs font-medium text-muted-foreground">Active Address</Label>
+                                <p className="font-mono text-xs break-all text-foreground bg-secondary/30 p-2 rounded-md">
+                                    {currentAddress}
+                                </p>
                             </div>
-                            <div>
-                                <Label className="text-xs text-foreground/80 font-medium">Network</Label>
-                                <p className="font-semibold text-foreground mt-0.5">{network}</p>
-                            </div>
-                        </div>
+                        )}
                     </div>
                 </div>
             ) : (
@@ -270,16 +283,10 @@ export function WalletConnection({ onAddressChange, defaultAddress }: WalletConn
                 </div>
             )}
 
-            {currentAddress && isValidAddress(currentAddress) && (
-                <div className="mt-4 pt-4 border-t border-border">
-                    <p className="text-xs text-foreground/80 font-medium mb-1">Active Address</p>
-                    <p className="font-mono text-xs break-all text-foreground">{currentAddress}</p>
-                </div>
-            )}
             {currentAddress && !isValidAddress(currentAddress) && (
                 <div className="mt-4 pt-4 border-t border-border">
                     <p className="text-xs text-red-500 font-medium mb-1">Invalid Address Format</p>
-                    <p className="font-mono text-xs break-all text-red-500">{currentAddress}</p>
+                    <p className="font-mono text-xs break-all text-red-500 bg-red-500/10 p-2 rounded-md">{currentAddress}</p>
                     <p className="text-xs text-red-500 mt-1">Address must start with 0x and be 42 characters long</p>
                 </div>
             )}
