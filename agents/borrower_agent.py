@@ -44,11 +44,15 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # ============================================================================
 # PRIVACY-FIRST CONFIGURATION: Llama 3 via Ollama (Local)
 # ============================================================================
-llama3_llm = LLM(
-    model="ollama/llama3",
-    base_url="http://localhost:11434",
-    temperature=0.7,
-)
+# LLM is initialized lazily when agent is actually used, not at module import
+# This prevents the model from starting before wallet connection
+def get_llm():
+    """Get LLM instance - initialized only when needed."""
+    return LLM(
+        model="ollama/llama3",
+        base_url="http://localhost:11434",
+        temperature=0.7,
+    )
 
 
 # ============================================================================
@@ -434,7 +438,7 @@ def create_borrower_agent() -> Agent:
         backstory="You are Lenny, an expert DeFi negotiator.",
         verbose=True,
         allow_delegation=False,
-        llm=llama3_llm,
+        llm=get_llm(),
         tools=[AnalyzeLoanTool(), NegotiateTool(), AcceptAndSettleTool(), XAILogTool()],
         max_iter=5
     )

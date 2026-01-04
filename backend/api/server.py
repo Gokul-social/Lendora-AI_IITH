@@ -45,12 +45,16 @@ except ImportError:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
+    port = int(os.getenv("PORT", "8000"))
+    host = os.getenv("HOST", "0.0.0.0")
+    display_host = "localhost" if host == "0.0.0.0" else host
+    
     print("=" * 70)
     print("Lendora AI Backend API Started")
     print("=" * 70)
-    print("REST API:    http://localhost:8000")
-    print("WebSocket:   ws://localhost:8000/ws")
-    print("Docs:        http://localhost:8000/docs")
+    print(f"REST API:    http://{display_host}:{port}")
+    print(f"WebSocket:   ws://{display_host}:{port}/ws")
+    print(f"Docs:        http://{display_host}:{port}/docs")
     print("=" * 70)
     
     # Initialize Hydra manager
@@ -1076,4 +1080,6 @@ async def websocket_endpoint(ws: WebSocket):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.getenv("PORT", "8000"))
+    host = os.getenv("HOST", "0.0.0.0")
+    uvicorn.run(app, host=host, port=port)

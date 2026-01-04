@@ -26,11 +26,14 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # ============================================================================
 # PRIVACY-FIRST CONFIGURATION: Llama 3 via Ollama (Local)
 # ============================================================================
-llama3_llm = LLM(
-    model="ollama/llama3",
-    base_url="http://localhost:11434",
-    temperature=0.6,  # More conservative for lending decisions
-)
+# LLM is initialized lazily when agent is actually used, not at module import
+def get_llm():
+    """Get LLM instance - initialized only when needed."""
+    return LLM(
+        model="ollama/llama3",
+        base_url="http://localhost:11434",
+        temperature=0.6,  # More conservative for lending decisions
+    )
 
 
 # ============================================================================
@@ -269,7 +272,7 @@ def create_lender_agent() -> Agent:
         ),
         verbose=True,
         allow_delegation=False,
-        llm=llama3_llm,
+        llm=get_llm(),
         tools=[RiskAssessmentTool(), EvaluateOfferTool(), CreateOfferTool(), SignSettlementTool(), XAITool()],
         max_iter=6
     )
@@ -359,7 +362,8 @@ if __name__ == "__main__":
     print("=" * 70)
     print("Lendora AI - Lender Agent (Luna)")
     print("Privacy-First Configuration: Using Llama 3 via Ollama")
-    print(f"Ollama Endpoint: {llama3_llm.base_url}")
+    llm = get_llm()
+    print(f"Ollama Endpoint: {llm.base_url if hasattr(llm, 'base_url') else 'http://localhost:11434'}")
     print("=" * 70)
     print("Make sure Ollama is running: ollama serve")
     print("Make sure Llama 3 is installed: ollama pull llama3\n")
