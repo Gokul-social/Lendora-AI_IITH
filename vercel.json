@@ -1,14 +1,6 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "frontend/Dashboard/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
-    }
-  ],
+  "buildCommand": "cd frontend/Dashboard && npm install && npm run build",
+  "outputDirectory": "frontend/Dashboard/dist",
   "rewrites": [
     {
       "source": "/(.*)",
