@@ -12,7 +12,7 @@ import { HeroCube } from '@/components/3d/HeroCube';
 import { ParticleField } from '@/components/3d/ParticleField';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Wallet, ChevronDown, ExternalLink, AlertCircle } from 'lucide-react';
+import { Wallet, ChevronDown, ExternalLink, AlertCircle, Loader2 } from 'lucide-react';
 import { useWallet } from '@/hooks/useWallet';
 import { useTheme } from 'next-themes';
 import type { WalletName } from '@/lib/wallet/cardano-wallet';
@@ -115,18 +115,30 @@ export default function LoginGate() {
                     transition={{ duration: 0.8, delay: 1 }}
                     className="pointer-events-auto w-full max-w-md"
                 >
-                    <Card className="p-6 md:p-8 backdrop-blur-2xl bg-card/80 border-2 border-primary/30 hover:border-primary transition-all duration-300">
+                    <Card className="p-6 md:p-8 backdrop-blur-2xl bg-card/90 border-2 border-primary/20 shadow-2xl">
                         <div className="text-center mb-6">
-                            <Wallet className="w-12 md:w-16 h-12 md:h-16 mx-auto mb-4 text-primary" />
-                            <h2 className="text-xl md:text-2xl font-bold text-foreground mb-2">
-                                {isConnected ? 'Wallet Connected' : 'Connect Your Wallet'}
+                            <motion.div
+                                className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-4 rounded-full hero-gradient flex items-center justify-center"
+                                animate={{ scale: [1, 1.05, 1] }}
+                                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                            >
+                                <Wallet className="w-8 md:w-10 h-8 md:h-10 text-primary" />
+                            </motion.div>
+                            <h2 className="text-2xl md:text-3xl font-bold text-gradient mb-2">
+                                {isConnected ? '✨ Connected!' : 'Connect Wallet'}
                             </h2>
-                            <p className="text-sm text-muted-foreground">
-                                {isConnected
-                                    ? `${shortAddress} • ${balance} ₳ • ${network}`
-                                    : 'Select a wallet to start using Lendora AI'
-                                }
-                            </p>
+                            {isConnected ? (
+                                <div className="space-y-1">
+                                    <p className="text-sm font-mono text-foreground">{shortAddress}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                        {balance} ₳ • {network}
+                                    </p>
+                                </div>
+                            ) : (
+                                <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                                    Choose your Cardano wallet to access privacy-first DeFi lending with AI-powered negotiations
+                                </p>
+                            )}
                         </div>
 
                         {/* Error Message */}
@@ -136,9 +148,9 @@ export default function LoginGate() {
                                     initial={{ opacity: 0, height: 0 }}
                                     animate={{ opacity: 1, height: 'auto' }}
                                     exit={{ opacity: 0, height: 0 }}
-                                    className="mb-4 p-3 rounded-lg bg-destructive/20 border border-destructive/30 flex items-center gap-2"
+                                    className="mb-4 p-4 rounded-xl bg-destructive/10 border border-destructive/20 flex items-start gap-3"
                                 >
-                                    <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0" />
+                                    <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
                                     <p className="text-sm text-destructive">{error}</p>
                                 </motion.div>
                             )}
@@ -148,17 +160,24 @@ export default function LoginGate() {
                             {isConnected ? (
                                 <>
                                     <Button
-                                        onClick={() => {
-                                            setIsAnimating(true);
-                                            setTimeout(() => navigate('/dashboard'), ANIMATION_DURATION);
-                                        }}
-                                        className="w-full bg-gradient-to-r from-primary to-secondary hover:from-secondary hover:to-primary text-white font-semibold py-5 md:py-6 text-lg transition-all duration-300"
+                                        onClick={handleDemoMode}
+                                        size="lg"
+                                        className="w-full gradient-glow text-lg font-semibold shadow-lg hover:shadow-xl transition-all"
+                                        disabled={isAnimating}
                                     >
-                                        Enter Dashboard
+                                        {isAnimating ? (
+                                            <>
+                                                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                                                Entering Portal...
+                                            </>
+                                        ) : (
+                                            'Enter Dashboard →'
+                                        )}
                                     </Button>
                                     <Button
                                         onClick={disconnect}
                                         variant="outline"
+                                        size="lg"
                                         className="w-full"
                                     >
                                         Disconnect Wallet
@@ -166,85 +185,84 @@ export default function LoginGate() {
                                 </>
                             ) : (
                                 <>
-                                    {/* Wallet Selection Button */}
-                                    <Button
-                                        onClick={() => setShowWalletList(!showWalletList)}
-                                        disabled={isConnecting}
-                                        className="w-full bg-gradient-to-r from-primary to-secondary hover:from-secondary hover:to-primary text-white font-semibold py-5 md:py-6 text-lg transition-all duration-300"
-                                    >
-                                        {isConnecting ? (
-                                            <span className="flex items-center gap-2">
-                                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                                Connecting...
-                                            </span>
-                                        ) : (
-                                            <span className="flex items-center gap-2">
-                                                Connect Wallet
-                                                <ChevronDown className={`w-5 h-5 transition-transform ${showWalletList ? 'rotate-180' : ''}`} />
-                                            </span>
-                                        )}
-                                    </Button>
-
-                                    {/* Wallet List Dropdown */}
-                                    <AnimatePresence>
-                                        {showWalletList && (
-                                            <motion.div
-                                                initial={{ opacity: 0, height: 0 }}
-                                                animate={{ opacity: 1, height: 'auto' }}
-                                                exit={{ opacity: 0, height: 0 }}
-                                                className="overflow-hidden"
+                                    {installedCount > 0 ? (
+                                        <>
+                                            <Button
+                                                onClick={() => setShowWalletList(!showWalletList)}
+                                                size="lg"
+                                                className="w-full gradient-glow text-lg font-semibold shadow-lg hover:shadow-xl transition-all group"
+                                                disabled={isConnecting}
                                             >
-                                                <div className="space-y-2 pt-2">
-                                                    {installedWallets.map((wallet) => (
-                                                        <Button
-                                                            key={wallet.name}
-                                                            onClick={() => wallet.installed && handleWalletSelect(wallet.name)}
-                                                            variant={wallet.name === 'eternl' && wallet.installed ? 'default' : 'outline'}
-                                                            disabled={!wallet.installed || isConnecting}
-                                                            className={`w-full justify-between ${wallet.name === 'eternl' && wallet.installed
-                                                                ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                                                                : wallet.installed
-                                                                    ? 'hover:border-primary'
-                                                                    : 'opacity-50 cursor-not-allowed'
-                                                                }`}
-                                                        >
-                                                            <span className="flex items-center gap-2">
-                                                                <span className="text-xl">{wallet.icon}</span>
-                                                                {wallet.displayName}
-                                                                {wallet.name === 'eternl' && wallet.installed && (
-                                                                    <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded">Recommended</span>
-                                                                )}
-                                                            </span>
-                                                            {wallet.installed ? (
-                                                                <span className="text-xs text-success">Installed</span>
-                                                            ) : (
-                                                                <ExternalLink className="w-4 h-4 text-muted-foreground" />
-                                                            )}
-                                                        </Button>
-                                                    ))}
-                                                </div>
-
-                                                {installedCount === 0 && (
-                                                    <p className="text-xs text-center text-muted-foreground mt-3">
-                                                        No wallets detected. Install{' '}
-                                                        <a href="https://eternl.io" target="_blank" rel="noopener" className="text-primary hover:underline font-medium">
-                                                            Eternl
-                                                        </a>
-                                                        {' '}(recommended),{' '}
-                                                        <a href="https://namiwallet.io" target="_blank" rel="noopener" className="text-primary hover:underline">
-                                                            Nami
-                                                        </a>
-                                                        , or{' '}
-                                                        <a href="https://yoroi-wallet.com" target="_blank" rel="noopener" className="text-primary hover:underline">
-                                                            Yoroi
-                                                        </a>
-                                                    </p>
+                                                {isConnecting ? (
+                                                    <>
+                                                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                                                        Connecting...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Wallet className="mr-2 h-5 w-5" />
+                                                        Select Wallet ({installedCount} found)
+                                                        <ChevronDown className={`ml-2 h-4 w-4 transition-transform ${showWalletList ? 'rotate-180' : ''}`} />
+                                                    </>
                                                 )}
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
+                                            </Button>
 
-                                    {/* Demo Mode */}
+                                            <AnimatePresence>
+                                                {showWalletList && (
+                                                    <motion.div
+                                                        initial={{ opacity: 0, height: 0 }}
+                                                        animate={{ opacity: 1, height: 'auto' }}
+                                                        exit={{ opacity: 0, height: 0 }}
+                                                        className="space-y-2 pt-2"
+                                                    >
+                                                        {installedWallets
+                                                            .filter(w => w.installed)
+                                                            .map((wallet) => (
+                                                                <motion.button
+                                                                    key={wallet.name}
+                                                                    onClick={() => handleWalletSelect(wallet.name as WalletName)}
+                                                                    className="wallet-card w-full flex items-center justify-between text-left"
+                                                                    whileHover={{ scale: 1.02 }}
+                                                                    whileTap={{ scale: 0.98 }}
+                                                                >
+                                                                    <div className="flex items-center gap-3">
+                                                                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                                                                            <span className="text-primary font-bold text-lg">
+                                                                                {wallet.name[0].toUpperCase()}
+                                                                            </span>
+                                                                        </div>
+                                                                        <div>
+                                                                            <p className="font-semibold capitalize">{wallet.name}</p>
+                                                                            <p className="text-xs text-muted-foreground">
+                                                                                {wallet.name === 'eternl' ? 'Recommended' : 'Fast & Secure'}
+                                                                            </p>
+                                                                        </div>
+                                                                    </div>
+                                                                    <ExternalLink className="w-4 h-4 text-muted-foreground" />
+                                                                </motion.button>
+                                                            ))}
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+                                        </>
+                                    ) : (
+                                        <div className="text-center p-6 bg-muted/50 rounded-xl">
+                                            <AlertCircle className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
+                                            <p className="text-sm text-muted-foreground mb-4">
+                                                No Cardano wallets detected. Install one to continue.
+                                            </p>
+                                            <a
+                                                href="https://eternl.io"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-sm text-primary hover:underline inline-flex items-center gap-1"
+                                            >
+                                                Get Eternl Wallet
+                                                <ExternalLink className="w-3 h-3" />
+                                            </a>
+                                        </div>
+                                    )}
+
                                     <div className="relative">
                                         <div className="absolute inset-0 flex items-center">
                                             <div className="w-full border-t border-border" />
