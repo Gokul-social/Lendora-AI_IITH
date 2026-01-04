@@ -52,12 +52,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - name: Install Aiken
+    - name: Install and Check Aiken Contracts
       run: |
+        # Install Aiken
         curl -sSfL https://install.aiken-lang.org | sh
-        echo "$HOME/.aiken/bin" >> $GITHUB_PATH
-    - name: Check contracts
-      run: |
+        export PATH="$HOME/.aiken/bin:$PATH"
+        
+        # Verify installation
+        aiken --version
+        
+        # Check and build contracts
         cd contracts/contracts
         aiken check
         aiken build
