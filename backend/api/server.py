@@ -520,16 +520,16 @@ async def open_hydra_head_real(
         })
 
         # Broadcast updated Hydra status with head information
-               await manager.broadcast({
-                   "type": "hydra_status",
-                   "data": {
-                       "mode": "hydra" if hydra_manager.client._connected else "direct",
-                       "connected": hydra_manager.client._connected,
-                       "head_state": "Open",
-                       "active_negotiations": len(hydra_manager.active_negotiations),
-                       "current_head_id": negotiation.head_id
-                   }
-               })
+        await manager.broadcast({
+            "type": "hydra_status",
+            "data": {
+                "mode": "hydra" if hydra_manager.client._connected else "direct",
+                "connected": hydra_manager.client._connected,
+                "head_state": "Open",
+                "active_negotiations": len(hydra_manager.active_negotiations),
+                "current_head_id": negotiation.head_id
+            }
+        })
         
         state.current_negotiation = {
             "head_id": negotiation.head_id,
@@ -1210,7 +1210,7 @@ async def run_agent_negotiation(
 
             await manager.broadcast({
                 "type": "agent_status",
-                "data": {"status": "negotiating", "task": "AI analysis complete"}
+                "data": {"status": "analyzing", "task": "AI analysis complete"}
             })
 
         else:
@@ -1467,27 +1467,48 @@ async def start_workflow(req: WorkflowRequest, background_tasks: BackgroundTasks
             })
             result = await negotiate_in_hydra_real(new_target)
         
-        # Step 6: Accept and Settle (uses real client if available)
-        settlement = await close_hydra_and_settle_real()
-        
-        # Add final settlement message
-        state.conversations[conversation_id].append({
-            "id": f"msg_{len(state.conversations[conversation_id])}",
-            "timestamp": datetime.now().isoformat(),
-            "agent": "system",
-            "type": "action",
-            "content": f"Settlement transaction submitted. Loan disbursed successfully!"
-        })
-        
-        # Reset state after workflow completes
-        await asyncio.sleep(1)  # Brief delay to show completion
-        state.stats["agentStatus"] = "idle"
-        state.current_negotiation = None
-        
-        await manager.broadcast({
-            "type": "agent_status",
-            "data": {"status": "idle", "task": "Workflow complete. Ready for next loan."}
-        })
+        # Step 6: Accept and Settle (only if auto_confirm is enabled)
+        settlement = None
+        if req.auto_confirm:
+            settlement = await close_hydra_and_settle_real()
+
+            # Add final settlement message
+            state.conversations[conversation_id].append({
+                "id": f"msg_{len(state.conversations[conversation_id])}",
+                "timestamp": datetime.now().isoformat(),
+                "agent": "system",
+                "type": "action",
+                "content": f"Settlement transaction submitted. Loan disbursed successfully!"
+            })
+
+            # Reset state after workflow completes
+            await asyncio.sleep(1)  # Brief delay to show completion
+            state.stats["agentStatus"] = "idle"
+            state.current_negotiation = None
+
+            await manager.broadcast({
+                "type": "agent_status",
+                "data": {"status": "idle", "task": "Workflow complete. Ready for next loan."}
+            })
+        else:
+            # Mark negotiation as completed but don't close yet
+            if state.current_negotiation:
+                state.current_negotiation["status"] = "completed"
+                state.current_negotiation["final_rate"] = result.get('rate', target)
+
+            # Add message indicating negotiation is complete but waiting for user consent
+            state.conversations[conversation_id].append({
+                "id": f"msg_{len(state.conversations[conversation_id])}",
+                "timestamp": datetime.now().isoformat(),
+                "agent": "system",
+                "type": "message",
+                "content": f"Negotiation complete! Final rate: {result.get('rate', target)}%. Awaiting your confirmation to close the deal."
+            })
+
+            await manager.broadcast({
+                "type": "agent_status",
+                "data": {"status": "completed", "task": "Negotiation complete. Awaiting user confirmation."}
+            })
         
         await manager.broadcast({
             "type": "conversation_update",
@@ -1538,6 +1559,71 @@ async def accept_terms():
     """Accept current terms and settle."""
     settlement = await close_hydra_and_settle_real()
     return settlement
+
+
+@app.post("/api/negotiation/settle")
+async def manual_settlement():
+    """Manually settle a completed negotiation (for when auto_confirm is disabled)."""
+    try:
+        # Check if there's an active negotiation
+        if not state.current_negotiation:
+            return {
+                "success": False,
+                "error": "No active negotiation found. Start a negotiation first."
+            }
+
+        neg = state.current_negotiation
+
+        # Check if negotiation is in a completed state
+        if neg.get("status") != "completed":
+            return {
+                "success": False,
+                "error": "Negotiation is not completed. Wait for negotiation to finish."
+            }
+
+        print(f"[Manual Settlement] Processing settlement for head_id: {neg['head_id']}")
+
+        # Close Hydra head and settle
+        settlement = await close_hydra_and_settle_real()
+
+        # Add settlement message to the most recent conversation
+        latest_conversation_id = None
+        if state.conversations:
+            latest_conversation_id = max(state.conversations.keys())
+
+        if latest_conversation_id:
+            state.conversations[latest_conversation_id].append({
+                "id": f"msg_{len(state.conversations[latest_conversation_id])}",
+                "timestamp": datetime.now().isoformat(),
+                "agent": "system",
+                "type": "action",
+                "content": f"Manual settlement completed! Loan disbursed successfully."
+            })
+
+            # Broadcast conversation update
+            await manager.broadcast({
+                "type": "conversation_update",
+                "data": {"conversation_id": latest_conversation_id}
+            })
+
+        # Broadcast final status update
+        await manager.broadcast({
+            "type": "agent_status",
+            "data": {"status": "idle", "task": "Manual settlement complete. Ready for next loan."}
+        })
+
+        return {
+            "success": True,
+            "settlement": settlement,
+            "message": "Manual settlement completed successfully"
+        }
+
+    except Exception as e:
+        print(f"[Manual Settlement] Error: {e}")
+        return {
+            "success": False,
+            "error": f"Settlement failed: {str(e)}"
+        }
 
 
 # --- Agent Status ---

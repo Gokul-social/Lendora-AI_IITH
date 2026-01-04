@@ -1,7 +1,9 @@
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
-import { Brain, MessageCircle, Activity, CheckCircle2, AlertCircle, Bot, Search } from 'lucide-react';
+import { Brain, MessageCircle, Activity, CheckCircle2, AlertCircle, Bot, Search, Handshake } from 'lucide-react';
+import { useState } from 'react';
 
 interface AgentStatusProps {
   status: 'idle' | 'negotiating' | 'analyzing';
@@ -28,6 +30,35 @@ interface AgentStatusProps {
 }
 
 export function AgentStatus({ status, task, conversation, workflowSteps }: AgentStatusProps) {
+  const [settling, setSettling] = useState(false);
+
+  const handleManualSettlement = async () => {
+    try {
+      setSettling(true);
+      const response = await fetch('/api/negotiation/settle', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        console.log('Settlement completed successfully:', result);
+        // The WebSocket will handle status updates automatically
+      } else {
+        console.error('Settlement failed:', result.error);
+        alert(`Settlement failed: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error during settlement:', error);
+      alert('Error during settlement. Please try again.');
+    } finally {
+      setSettling(false);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'idle':
@@ -87,6 +118,23 @@ export function AgentStatus({ status, task, conversation, workflowSteps }: Agent
           <div className="mb-4">
             <p className="text-sm text-muted-foreground mb-2">Current Task:</p>
             <p className="text-sm font-medium">{task}</p>
+          </div>
+        )}
+
+        {/* Manual Settlement Button */}
+        {status === 'completed' && task && task.includes('Awaiting user confirmation') && (
+          <div className="mb-4">
+            <Button
+              onClick={handleManualSettlement}
+              disabled={settling}
+              className="w-full bg-green-600 hover:bg-green-700 text-white"
+            >
+              <Handshake className="w-4 h-4 mr-2" />
+              {settling ? 'Processing Settlement...' : 'Complete Deal & Settle'}
+            </Button>
+            <p className="text-xs text-muted-foreground mt-2 text-center">
+              Click to close the Hydra head and process the loan disbursement
+            </p>
           </div>
         )}
 

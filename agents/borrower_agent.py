@@ -193,6 +193,14 @@ except ImportError:
     INTEGRATED_CLIENT_AVAILABLE = False
     print("[BorrowerAgent] Warning: Integrated client not available")
 
+# Import Hydra configuration
+try:
+    from ..hydra.hydra_config import get_hydra_node_url
+    HYDRA_CONFIG_AVAILABLE = True
+except ImportError:
+    HYDRA_CONFIG_AVAILABLE = False
+    print("[BorrowerAgent] Warning: Hydra config not available, using defaults")
+
 
 class HydraHeadManager:
     """Manages Hydra Head lifecycle for off-chain negotiations."""
@@ -234,6 +242,7 @@ class HydraHeadManager:
         if proposed_rate >= state.original_offer.interest_rate - 1.5:
             state.current_rate = proposed_rate
             state.final_rate = proposed_rate
+            state.status = "completed"
             return {
                 "success": True,
                 "action": "accepted",
@@ -244,6 +253,7 @@ class HydraHeadManager:
             middle = round((proposed_rate + state.current_rate) / 2, 1)
             state.current_rate = middle
             state.final_rate = middle
+            state.status = "completed"
             return {
                 "success": True,
                 "action": "accepted",
@@ -266,7 +276,8 @@ class HydraHeadManager:
             raise ValueError("Head not found")
         
         state = self.active_heads[head_id]
-        
+        state.status = "settling"
+
         print(f"\n[Hydra] Accepting final terms...")
         print(f"[Hydra] Final rate: {state.final_rate}%")
         print(f"[Hydra] Rounds: {state.rounds}")
@@ -349,7 +360,20 @@ class AikenValidator:
 
 # Global instances
 midnight_client = MidnightClient()
-hydra_manager = HydraHeadManager()
+
+# Initialize Hydra manager with configured node URL
+try:
+    if HYDRA_CONFIG_AVAILABLE:
+        hydra_node_url = get_hydra_node_url()
+        hydra_manager = HydraHeadManager(node_url=hydra_node_url)
+        print(f"[BorrowerAgent] Using Hydra node: {hydra_node_url}")
+    else:
+        hydra_manager = HydraHeadManager()
+        print("[BorrowerAgent] Using default Hydra node: ws://localhost:4001")
+except Exception as e:
+    print(f"[BorrowerAgent] Error loading Hydra config: {e}, using defaults")
+    hydra_manager = HydraHeadManager()
+
 aiken_validator = AikenValidator()
 
 

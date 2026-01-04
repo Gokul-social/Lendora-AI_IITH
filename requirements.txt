@@ -9,6 +9,7 @@ crewai-tools>=0.2.0
 # LLM Integration (configured for local Ollama/Llama 3)
 langchain>=0.1.0
 langchain-openai>=0.0.5
+litellm>=1.0.0
 
 # WebSocket client for Hydra Node
 websockets>=12.0

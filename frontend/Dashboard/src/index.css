@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
 @layer base {
   :root {
     /* Obsidian Theme - Dark, high contrast, excellent readability */
@@ -25,6 +29,195 @@
     --input: 220 15% 20%;
     --ring: 260 80% 65%;
     --radius: 0.5rem;
+
+    /* Additional obsidian theme variables */
+    --glass: 220 12% 12% / 0.8;
+    --glass-border: 220 15% 25% / 0.5;
+    --primary-glow: 260 80% 65%;
+    --agent-pulse: 260 80% 65%;
+    --success: 152 76% 40%;
+    --warning: 38 92% 50%;
+  }
+}
+
+@layer utilities {
+  .glass-card {
+    /* Obsidian theme solid cards with subtle borders */
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+  }
+
+  .glass-card:hover {
+    border-color: hsl(var(--primary) / 0.3);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.3);
+    transform: translateY(-1px);
+  }
+
+  .glass-card-glow {
+    @apply glass-card;
+
+    /* Enhanced glow effect */
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.12),
+      0 12px 48px rgba(0, 0, 0, 0.15),
+      inset 0 1px 0 rgba(255, 255, 255, 0.18),
+      0 0 24px rgba(187, 100, 255, 0.08);
+  }
+
+  .glass-card-glow:hover {
+    /* Intensified glow on hover */
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.2),
+      0 16px 64px rgba(0, 0, 0, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.25),
+      0 0 32px rgba(187, 100, 255, 0.15),
+      0 0 48px rgba(100, 150, 255, 0.08);
+  }
+
+  /* Additional glassmorphism variations */
+  .glass-subtle {
+    /* Match main glass-card brightness for consistency */
+    background: rgba(255, 255, 255, 0.08);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+
+  .glass-subtle:hover {
+    /* Subtle hover - matching main glass-card */
+    background: rgba(255, 255, 255, 0.09);
+    -webkit-backdrop-filter: blur(22px) saturate(185%);
+    backdrop-filter: blur(22px) saturate(185%);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow:
+      0 10px 36px rgba(0, 0, 0, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.16),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.06);
+  }
+
+  .glass-accent {
+    background: rgba(187, 100, 255, 0.08);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    backdrop-filter: blur(16px) saturate(160%);
+    border: 1px solid rgba(187, 100, 255, 0.15);
+    box-shadow:
+      0 8px 32px rgba(187, 100, 255, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+  }
+
+  .glass-accent:hover {
+    background: rgba(187, 100, 255, 0.12);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(187, 100, 255, 0.25);
+    box-shadow:
+      0 12px 40px rgba(187, 100, 255, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  }
+
+  .gradient-glow {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%);
+  }
+
+  .gradient-border {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%);
+    padding: 2px;
+    border-radius: inherit;
+  }
+
+  .gradient-border>* {
+    background: hsl(var(--background));
+    border-radius: inherit;
+  }
+
+  .dot-pattern {
+    background-image: radial-gradient(circle, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  .shimmer {
+    background: linear-gradient(90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.05) 50%,
+        rgba(255, 255, 255, 0) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
+  @keyframes gradient-shift {
+
+    0%,
+    100% {
+      background-position: 0% 50%;
+    }
+
+    50% {
+      background-position: 100% 50%;
+    }
+  }
+
+  @keyframes float {
+
+    0%,
+    100% {
+      transform: translateY(0px);
+    }
+
+    50% {
+      transform: translateY(-20px);
+    }
+  }
+
+  @keyframes pulse-glow {
+
+    0%,
+    100% {
+      box-shadow: 0 0 20px rgba(187, 100, 255, 0.3);
+    }
+
+    50% {
+      box-shadow: 0 0 40px rgba(187, 100, 255, 0.6);
+    }
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%);
+  }
+
+  .hero-gradient {
+    background: linear-gradient(135deg,
+        hsl(var(--primary) / 0.1) 0%,
+        hsl(var(--secondary) / 0.1) 100%);
+    background-size: 200% 200%;
+    animation: gradient-shift 15s ease infinite;
+  }
+
+  .wallet-card {
+    @apply glass-card p-4 rounded-xl transition-all duration-300;
+  }
+
+  .wallet-card:hover {
+    @apply border-primary/50 shadow-lg;
+    transform: translateY(-2px);
   }
 }
 
@@ -35,151 +228,16 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: -apple-system, 'Inter', 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
-    font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    font-size: 15px;
-    line-height: 1.6;
-    color: hsl(var(--foreground));
-  }
-
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-semibold;
-    line-height: 1.3;
-    letter-spacing: -0.02em;
-  }
-
-  h1 {
-    font-size: 2rem;
-    font-weight: 700;
-  }
-
-  h2 {
-    font-size: 1.5rem;
-    font-weight: 600;
-  }
-
-  h3 {
-    font-size: 1.25rem;
-    font-weight: 600;
-  }
-
-  p {
-    line-height: 1.7;
   }
 }
 
-/* Obsidian Theme Components */
-@layer utilities {
-  .glass-card {
-    @apply bg-card border border-border;
-    background: hsl(var(--card));
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
-    transition: all 0.2s ease;
-  }
-
-  .glass-card:hover {
-    @apply border-primary/30;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.3);
-    transform: translateY(-1px);
-  }
-
-  .glass-panel {
-    @apply bg-card border border-border;
-    background: hsl(var(--card));
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-    transition: all 0.2s ease;
-  }
-
-  .glass-panel:hover {
-    @apply border-primary/40;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  }
-
-  .gradient-text {
-    @apply bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent;
-    background-size: 200% 200%;
-    animation: gradient-flow 6s ease infinite;
-  }
-
-  .animate-gradient {
-    animation: gradient-flow 8s ease infinite;
-    background-size: 200% 200%;
-  }
-
-  .shimmer {
-    position: relative;
-    overflow: hidden;
-  }
-
-  .shimmer::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.1), transparent);
-    animation: shimmer 3s infinite;
-  }
-
-  .hover-lift {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-  }
-
-  .hover-lift:hover {
-    transform: translateY(-2px);
-  }
-
-  .icon-glow {
-    filter: drop-shadow(0 0 4px currentColor);
-  }
-
-  /* Obsidian readability improvements */
-  .text-readable {
-    color: hsl(var(--foreground));
-    line-height: 1.7;
-  }
-
-  .text-muted-readable {
-    color: hsl(var(--muted-foreground));
-    line-height: 1.6;
-  }
+/* Confidence bar styles */
+.confidence-bar {
+  @apply flex-1 h-1.5 bg-muted rounded-full overflow-hidden;
 }
 
-@keyframes gradient-flow {
-  0% {
-    background-position: 0% 50%;
-  }
-
-  50% {
-    background-position: 100% 50%;
-  }
-
-  100% {
-    background-position: 0% 50%;
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    left: -100%;
-  }
-
-  100% {
-    left: 100%;
-  }
-}
-
-@keyframes icon-pulse {
-
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.7;
-  }
+.confidence-bar-fill {
+  @apply h-full bg-primary transition-all duration-300;
+  min-width: 0;
+  max-width: 100%;
 }
