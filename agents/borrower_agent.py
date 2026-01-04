@@ -209,7 +209,7 @@ if __name__ == "__main__":
     print("Privacy-First Configuration: Using Llama 3 via Ollama")
     print(f"Ollama Endpoint: {llama3_llm.openai_api_base}")
     print("=" * 70)
-    print("\n⚠️  Make sure Ollama is running: ollama serve")
-    print("⚠️  Make sure Llama 3 is installed: ollama pull llama3\n")
+    print("Make sure Ollama is running: ollama serve")
+    print("Make sure Llama 3 is installed: ollama pull llama3\n")
     
     monitor_loan_offers()

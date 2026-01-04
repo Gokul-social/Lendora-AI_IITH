@@ -215,11 +215,11 @@ async def websocket_endpoint(websocket: WebSocket):
 @app.on_event("startup")
 async def startup_event():
     print("=" * 70)
-    print("🚀 Lendora AI Backend API Started")
+    print("Lendora AI Backend API Started")
     print("=" * 70)
-    print("📡 REST API:    http://localhost:8000")
-    print("🔌 WebSocket:   ws://localhost:8000/ws")
-    print("📚 Docs:        http://localhost:8000/docs")
+    print("REST API:    http://localhost:8000")
+    print("WebSocket:   ws://localhost:8000/ws")
+    print("Docs:        http://localhost:8000/docs")
     print("=" * 70)
 
 if __name__ == "__main__":
