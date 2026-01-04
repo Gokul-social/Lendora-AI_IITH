@@ -215,25 +215,38 @@ class Trade(BaseModel):
 class ConnectionManager:
     def __init__(self):
         self.connections: List[WebSocket] = []
+        self._lock = asyncio.Lock()
     
     async def connect(self, ws: WebSocket):
         await ws.accept()
-        self.connections.append(ws)
+        async with self._lock:
+            self.connections.append(ws)
     
-    def disconnect(self, ws: WebSocket):
-        if ws in self.connections:
-            self.connections.remove(ws)
+    async def disconnect(self, ws: WebSocket):
+        async with self._lock:
+            if ws in self.connections:
+                self.connections.remove(ws)
     
     async def broadcast(self, message: dict):
         # Create a copy of connections to avoid race conditions during iteration
-        connections_copy = self.connections.copy()
+        async with self._lock:
+            connections_copy = self.connections.copy()
+        
+        # Broadcast to all connections
+        dead_connections = []
         for conn in connections_copy:
             try:
                 await conn.send_json(message)
-            except:
-                # Connection might be closed, remove it
-                if conn in self.connections:
-                    self.connections.remove(conn)
+            except Exception:
+                # Connection might be closed, mark for removal
+                dead_connections.append(conn)
+        
+        # Remove dead connections
+        if dead_connections:
+            async with self._lock:
+                for conn in dead_connections:
+                    if conn in self.connections:
+                        self.connections.remove(conn)
 
 manager = ConnectionManager()
 

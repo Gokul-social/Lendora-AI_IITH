@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { AuroraBackground } from '@/components/ui/AuroraBackground';
+import { FluidBackground } from '@/components/ui/FluidBackground';
 import { WalletConnection } from '@/components/dashboard/WalletConnection';
 import {
     Wallet,
@@ -73,7 +73,8 @@ export default function LoginGate() {
     ];
 
     return (
-        <AuroraBackground>
+        <>
+            <FluidBackground variant="cyber-noir" intensity="medium" />
             <div className="min-h-screen flex items-center justify-center p-4">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
@@ -89,11 +90,15 @@ export default function LoginGate() {
                         className="text-center mb-8"
                     >
                         <div className="flex items-center justify-center gap-4 mb-6">
-                            <div className="p-4 rounded-2xl bg-primary/10">
-                                <Shield className="w-12 h-12 text-primary" />
-                            </div>
+                            <motion.div
+                                className="p-4 rounded-2xl bg-primary/10 glass-panel"
+                                whileHover={{ scale: 1.05, rotate: 5 }}
+                                transition={{ type: "spring", stiffness: 300 }}
+                            >
+                                <Shield className="w-12 h-12 text-primary icon-glow" />
+                            </motion.div>
                             <div>
-                                <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                                <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-primary via-purple-500 to-secondary bg-clip-text text-transparent animate-gradient">
                                     Lendora AI
                                 </h1>
                                 <p className="text-muted-foreground text-lg mt-2">
@@ -111,9 +116,9 @@ export default function LoginGate() {
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: 0.4, duration: 0.6 }}
                         >
-                            <Card className="glass-card p-6">
+                            <Card className="glass-panel p-6">
                                 <div className="flex items-center gap-3 mb-6">
-                                    <Sparkles className="w-6 h-6 text-primary" />
+                                    <Sparkles className="w-6 h-6 text-primary animate-pulse" />
                                     <h2 className="text-2xl font-bold">Choose Your Role</h2>
                                 </div>
 
@@ -130,11 +135,10 @@ export default function LoginGate() {
                                                 whileTap={{ scale: 0.98 }}
                                             >
                                                 <Card
-                                                    className={`glass-card p-4 cursor-pointer transition-all duration-300 ${
-                                                        selectedRole === role.id
-                                                            ? 'border-primary shadow-lg shadow-primary/20'
+                                                    className={`glass-card p-4 cursor-pointer transition-all duration-300 hover-lift ${selectedRole === role.id
+                                                            ? 'border-primary shadow-lg shadow-primary/20 shimmer'
                                                             : 'hover:border-primary/50'
-                                                    }`}
+                                                        }`}
                                                     onClick={() => handleRoleSelect(role.id as 'borrower' | 'lender')}
                                                 >
                                                     <div className="flex items-start gap-4">
@@ -146,7 +150,7 @@ export default function LoginGate() {
                                                             <div className="flex items-center gap-2 mb-2">
                                                                 <h3 className="text-lg font-semibold">{role.title}</h3>
                                                                 {selectedRole === role.id && (
-                                                                    <CheckCircle2 className="w-5 h-5 text-green-500" />
+                                                                    <CheckCircle2 className="w-5 h-5 text-green-500 animate-pulse" />
                                                                 )}
                                                             </div>
 
@@ -178,9 +182,9 @@ export default function LoginGate() {
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: 0.6, duration: 0.6 }}
                         >
-                            <Card className="glass-card p-6">
+                            <Card className="glass-panel p-6">
                                 <div className="flex items-center gap-3 mb-6">
-                                    <Wallet className="w-6 h-6 text-primary" />
+                                    <Wallet className="w-6 h-6 text-primary animate-pulse" />
                                     <h2 className="text-2xl font-bold">Connect Wallet</h2>
                                 </div>
 
@@ -194,10 +198,10 @@ export default function LoginGate() {
                                         initial={{ opacity: 0, scale: 0.9 }}
                                         animate={{ opacity: 1, scale: 1 }}
                                         transition={{ delay: 0.2 }}
-                                        className="mt-6 p-4 rounded-lg bg-green-500/10 border border-green-500/20"
+                                        className="mt-6 p-4 rounded-lg bg-green-500/10 border border-green-500/20 glass-card"
                                     >
                                         <div className="flex items-center gap-2 mb-2">
-                                            <CheckCircle2 className="w-5 h-5 text-green-500" />
+                                            <CheckCircle2 className="w-5 h-5 text-green-500 animate-pulse" />
                                             <span className="font-medium text-green-600">Wallet Connected</span>
                                         </div>
                                         <p className="text-xs text-muted-foreground font-mono">
@@ -223,7 +227,7 @@ export default function LoginGate() {
                             onClick={handleContinue}
                             disabled={!walletAddress || !selectedRole}
                             size="lg"
-                            className="px-8 py-4 text-lg font-semibold bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 shadow-lg"
+                            className="px-8 py-4 text-lg font-semibold bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 shadow-lg hover-lift shimmer"
                         >
                             <>
                                 <ArrowRight className="w-5 h-5 mr-2" />
@@ -271,11 +275,11 @@ export default function LoginGate() {
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: 1.2 + index * 0.1, duration: 0.4 }}
-                                    whileHover={{ y: -2 }}
+                                    whileHover={{ y: -4, scale: 1.02 }}
                                 >
-                                    <Card className="glass-card p-6 text-center">
+                                    <Card className="glass-panel p-6 text-center hover-lift">
                                         <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-primary/10 flex items-center justify-center">
-                                            <IconComponent className="w-6 h-6 text-primary" />
+                                            <IconComponent className="w-6 h-6 text-primary icon-glow" />
                                         </div>
                                         <h3 className="font-semibold mb-2">{feature.title}</h3>
                                         <p className="text-sm text-muted-foreground">{feature.description}</p>
@@ -286,6 +290,6 @@ export default function LoginGate() {
                     </motion.div>
                 </motion.div>
             </div>
-        </AuroraBackground>
+        </>
     );
 }
