@@ -26,8 +26,7 @@ Agents:
 
 from .borrower_agent import (
     create_borrower_agent,
-    monitor_loan_offers,
-    process_loan_offer,
+    run_complete_workflow,
     LoanOffer,
     HydraHeadManager,
 )
@@ -41,8 +40,7 @@ from .lender_agent import (
 __all__ = [
     # Borrower Agent (Lenny)
     "create_borrower_agent",
-    "monitor_loan_offers",
-    "process_loan_offer",
+    "run_complete_workflow",
     "LoanOffer",
     "HydraHeadManager",
     # Lender Agent (Luna)
