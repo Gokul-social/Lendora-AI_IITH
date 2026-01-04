@@ -1,9 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
-  "installCommand": "cd frontend/Dashboard && npm install --legacy-peer-deps",
-  "buildCommand": "cd frontend/Dashboard && npm run build",
-  "outputDirectory": "frontend/Dashboard/dist",
   "rewrites": [
     {
       "source": "/(.*)",
