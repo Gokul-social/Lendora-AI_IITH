@@ -110,5 +110,5 @@ fn initialize() -> State {
 //
 // WHAT THE LENDER SEES:
 // --------------------
-// ✅ is_eligible: true
-// ❌ credit_score: <HIDDEN>  // Zero-knowledge magic!
+// is_eligible: true
+// credit_score: <HIDDEN>  // Zero-knowledge magic!

@@ -1,0 +1,25 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/index.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "api/index.py"
+    }
+  ],
+  "env": {
+    "OLLAMA_BASE_URL": "@ollama_base_url",
+    "HYDRA_NODE_URL": "@hydra_node_url",
+    "HYDRA_MODE": "@hydra_mode",
+    "MIDNIGHT_API_URL": "@midnight_api_url",
+    "MIDNIGHT_API_KEY": "@midnight_api_key",
+    "BLOCKFROST_PROJECT_ID": "@blockfrost_project_id",
+    "CARDANO_NETWORK": "@cardano_network"
+  }
+}
+

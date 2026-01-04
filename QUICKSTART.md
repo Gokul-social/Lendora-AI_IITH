@@ -1,4 +1,4 @@
-# 🚀 Lendora AI - Quick Start Guide
+# Lendora AI - Quick Start Guide
 
 ## Running the Full Stack
 
@@ -41,7 +41,7 @@ Frontend will start at: `http://localhost:5173`
 python agents/borrower_agent.py
 ```
 
-## 🎨 What to Expect
+## What to Expect
 
 1. **Login Portal** (`http://localhost:5173/`):
    - 3D rotating HeroCube
@@ -55,12 +55,12 @@ python agents/borrower_agent.py
    - Liquid distortion hover effects
 
 3. **Features**:
-   - ✨ 3D graphics with React Three Fiber
-   - 🎭 Dark/Light mode toggle (Cyber-Noir/Foggy Future palettes)
-   - 📡 Real-time WebSocket updates
-   - 🔄 Scroll-linked 3D animations (Kasane effect)
+   - 3D graphics with React Three Fiber
+   - Dark/Light mode toggle (Cyber-Noir/Foggy Future palettes)
+   - Real-time WebSocket updates
+   - Scroll-linked 3D animations (Kasane effect)
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 **Issue**: TypeScript errors in VSCode  
 **Fix**: Run `npm install` and restart VSCode
@@ -71,7 +71,7 @@ python agents/borrower_agent.py
 **Issue**: WebSocket connection failed  
 **Fix**: Check CORS settings in `backend/api/server.py`
 
-## 📚 Tech Stack
+## Tech Stack
 
 - **Frontend**: Vite + React + TypeScript
 - **3D**: React Three Fiber + Drei

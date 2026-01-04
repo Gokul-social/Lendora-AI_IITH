@@ -8,6 +8,26 @@ Lendora is a next-generation decentralized lending protocol where AI agents nego
 
 ## Quick Start
 
+### Option 1: Docker (Recommended)
+
+```bash
+# Full stack deployment with one command
+./deploy.sh
+
+# Or manually
+docker-compose up -d
+
+# Production deployment
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+**Services will be available at:**
+- Frontend: http://localhost:80
+- Backend API: http://localhost:8000
+- API Docs: http://localhost:8000/docs
+
+### Option 2: Manual Setup
+
 Lendora AI works **out of the box** in mock mode - no Hydra node required!
 
 ```bash
@@ -584,14 +604,16 @@ disconnect();
 - [x] State management - Proper reset between workflows
 - [x] Error handling - Graceful fallbacks and recovery
 
-### Future Enhancements
+### Advanced Features (Implemented!)
 
-- [ ] Connect to actual Hydra node (Docker image not publicly available - see `docs/HYDRA_SETUP.md` for manual setup)
-- [ ] Actual Midnight network integration
-- [ ] Real Cardano tx building (PyCardano)
-- [ ] Holographic 3D analytics charts
-- [ ] Oracle integration for credit scores
-- [ ] Multi-agent negotiation scenarios
+- [x] **Connect to actual Hydra node** - Auto-connects with graceful fallback (see `docs/HYDRA_SETUP.md`)
+- [x] **Actual Midnight network integration** - ZK credit checks with privacy (see `backend/midnight/zk_client.py`)
+- [x] **Real Cardano tx building (PyCardano)** - Production-ready transaction building (see `backend/cardano/tx_builder.py`)
+- [x] **Holographic 3D analytics charts** - Immersive data visualization (see `frontend/Dashboard/src/components/3d/AnalyticsChart3D.tsx`)
+- [x] **Oracle integration for credit scores** - Real credit data fetching (see `backend/oracles/credit_oracle.py`)
+- [x] **Multi-agent negotiation scenarios** - Multiple borrowers/lenders (see `agents/multi_agent_negotiation.py`)
+
+**See `docs/ADVANCED_FEATURES.md` for complete implementation guide!**
 
 ---
 
@@ -711,6 +733,45 @@ This is **educational/experimental software** for the Cardano 2025 hackathon. Do
 ## License
 
 MIT License - Build cool things!
+
+---
+
+## Deployment
+
+Lendora AI can be deployed using Docker, Vercel, or GitHub Actions.
+
+### Quick Docker Deployment
+
+```bash
+# Development
+./deploy.sh
+
+# Production
+./deploy.sh prod
+
+# Or manually
+docker-compose up -d
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+### Vercel Deployment
+
+```bash
+# Frontend
+cd frontend/Dashboard
+vercel
+
+# Backend (requires serverless function setup)
+vercel --prod
+```
+
+**Note:** For Vercel backend deployment, Ollama cannot run on serverless. Use external Ollama service or disable AI agents.
+
+### GitHub Actions
+
+Automatically builds and deploys on push to main branch.
+
+**See `docs/DEPLOYMENT.md` for complete deployment guide.**
 
 ---
 

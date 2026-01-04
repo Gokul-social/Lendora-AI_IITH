@@ -41,11 +41,36 @@ except ImportError:
 try:
     from agents.borrower_agent import create_borrower_agent
     from agents.lender_agent import create_lender_agent, handle_negotiation_request
+    from agents.multi_agent_negotiation import get_negotiation_manager
     from crewai import Crew, Task
     AGENTS_AVAILABLE = True
 except ImportError as e:
     AGENTS_AVAILABLE = False
     print(f"[WARNING] Agent modules not available: {e}")
+
+# Import PyCardano transaction builder
+try:
+    from backend.cardano.tx_builder import get_tx_builder, LoanSettlementParams
+    CARDANO_TX_AVAILABLE = True
+except ImportError as e:
+    CARDANO_TX_AVAILABLE = False
+    print(f"[WARNING] PyCardano not available: {e}")
+
+# Import Midnight ZK client
+try:
+    from backend.midnight.zk_client import get_midnight_client, CreditCheckRequest
+    MIDNIGHT_AVAILABLE = True
+except ImportError as e:
+    MIDNIGHT_AVAILABLE = False
+    print(f"[WARNING] Midnight client not available: {e}")
+
+# Import Credit Oracle
+try:
+    from backend.oracles.credit_oracle import get_credit_oracle
+    ORACLE_AVAILABLE = True
+except ImportError as e:
+    ORACLE_AVAILABLE = False
+    print(f"[WARNING] Credit oracle not available: {e}")
 
 
 # ============================================================================
@@ -236,7 +261,7 @@ state = AppState()
 # ============================================================================
 
 async def perform_credit_check(borrower: str, score: int) -> Dict:
-    """Perform ZK credit check via Midnight."""
+    """Perform ZK credit check via Midnight (with oracle fallback)."""
     await manager.broadcast({
         "type": "workflow_step",
         "data": {
@@ -247,17 +272,45 @@ async def perform_credit_check(borrower: str, score: int) -> Dict:
         }
     })
     
-    await asyncio.sleep(1)  # Simulate processing
+    # Try to get credit score from oracle first
+    credit_score = score
+    if ORACLE_AVAILABLE:
+        oracle = get_credit_oracle()
+        oracle_data = oracle.get_credit_score(borrower)
+        if oracle_data:
+            credit_score = oracle_data.score
+            print(f"[Oracle] Fetched credit score: {credit_score} (confidence: {oracle_data.confidence})")
     
-    is_eligible = score >= 700
-    proof_hash = f"zk_proof_{borrower[:10]}_{int(datetime.now().timestamp())}"
-    
-    result = {
-        "borrower_address": borrower,
-        "is_eligible": is_eligible,
-        "proof_hash": proof_hash,
-        "timestamp": datetime.now().isoformat()
-    }
+    # Perform ZK credit check via Midnight
+    if MIDNIGHT_AVAILABLE:
+        midnight = get_midnight_client()
+        request = CreditCheckRequest(
+            borrower_address=borrower,
+            credit_score=credit_score
+        )
+        result_obj = midnight.submit_credit_check(request)
+        
+        result = {
+            "borrower_address": borrower,
+            "is_eligible": result_obj.is_eligible,
+            "proof_hash": result_obj.proof_hash,
+            "timestamp": result_obj.timestamp,
+            "network": result_obj.network,
+            "source": "midnight" if midnight.available else "mock"
+        }
+    else:
+        # Fallback to mock
+        await asyncio.sleep(1)  # Simulate processing
+        is_eligible = credit_score >= 700
+        proof_hash = f"zk_proof_{borrower[:10]}_{int(datetime.now().timestamp())}"
+        
+        result = {
+            "borrower_address": borrower,
+            "is_eligible": is_eligible,
+            "proof_hash": proof_hash,
+            "timestamp": datetime.now().isoformat(),
+            "source": "mock"
+        }
     
     state.credit_checks[borrower] = result
     
@@ -268,9 +321,10 @@ async def perform_credit_check(borrower: str, score: int) -> Dict:
             "name": "Midnight ZK Credit Check",
             "status": "completed",
             "details": {
-                "is_eligible": is_eligible,
-                "proof_hash": proof_hash,
-                "message": "Credit score verified privately via ZK proof"
+                "is_eligible": result["is_eligible"],
+                "proof_hash": result["proof_hash"],
+                "message": "Credit score verified privately via ZK proof",
+                "source": result.get("source", "mock")
             }
         }
     })
@@ -465,6 +519,30 @@ async def close_hydra_and_settle_real() -> Dict:
         }
     })
     
+    # Build real Cardano transaction if PyCardano is available
+    if CARDANO_TX_AVAILABLE:
+        try:
+            tx_builder = get_tx_builder()
+            if tx_builder.available:
+                principal_lovelace = int(settlement["principal"] * 1_000_000)
+                interest_lovelace = int((settlement["principal"] * settlement["final_rate"] / 100) * 1_000_000)
+                
+                tx_params = LoanSettlementParams(
+                    borrower_address=settlement["borrower"],
+                    lender_address=settlement["lender"],
+                    principal=principal_lovelace,
+                    interest_amount=interest_lovelace
+                )
+                
+                tx_result = tx_builder.build_settlement_tx(tx_params)
+                if tx_result.get("success"):
+                    settlement["tx_cbor"] = tx_result.get("tx_cbor")
+                    settlement["tx_id"] = tx_result.get("tx_id")
+                    settlement["real_tx"] = True
+                    print(f"[PyCardano] Transaction built: {tx_result.get('tx_id')}")
+        except Exception as e:
+            print(f"[PyCardano] Error building transaction: {e}")
+    
     # Record trade
     trade = {
         "id": f"trade_{int(datetime.now().timestamp())}",
@@ -474,7 +552,9 @@ async def close_hydra_and_settle_real() -> Dict:
         "interestRate": settlement["final_rate"],
         "originalRate": neg["original_rate"],
         "profit": round((neg["original_rate"] - settlement["final_rate"]) * settlement["principal"] / 100, 2),
-        "status": "completed"
+        "status": "completed",
+        "tx_id": settlement.get("tx_id"),
+        "real_tx": settlement.get("real_tx", False)
     }
     state.trades.insert(0, trade)
     
@@ -813,6 +893,49 @@ async def get_trades():
     return state.trades[:20]
 
 
+@app.get("/api/analytics")
+async def get_analytics():
+    """Get analytics data for 3D charts."""
+    # Generate analytics from trades and stats
+    profit_data = []
+    loans_data = []
+    rates_data = []
+    
+    # Process trades for profit chart
+    for i, trade in enumerate(state.trades[:12]):
+        profit_data.append({
+            "x": i,
+            "y": 0,
+            "value": trade.get("profit", 0) or 0,
+            "label": f"Trade {i + 1}"
+        })
+    
+    # Process loans
+    for i in range(min(10, state.stats.get("activeLoans", 0))):
+        loans_data.append({
+            "x": i,
+            "y": 0,
+            "value": 1,
+            "label": f"Loan {i + 1}"
+        })
+    
+    # Process interest rates from trades
+    for i, trade in enumerate(state.trades[:8]):
+        if trade.get("interestRate"):
+            rates_data.append({
+                "x": i,
+                "y": 0,
+                "value": trade.get("interestRate", 0),
+                "label": f"{trade.get('interestRate', 0)}%"
+            })
+    
+    return {
+        "profit": profit_data,
+        "loans": loans_data,
+        "rates": rates_data
+    }
+
+
 # --- Credit Check ---
 
 @app.post("/api/midnight/credit-check")
@@ -880,6 +1003,7 @@ async def run_agent_negotiation(
                 "reasoning": "AI agent analysis complete"
             })
             
+            # Broadcast conversation update
             await manager.broadcast({
                 "type": "conversation_update",
                 "data": {"conversation_id": conversation_id}
@@ -901,18 +1025,31 @@ async def run_agent_negotiation(
                 "confidence": 0.80,
                 "reasoning": "Mock analysis (agents not available)"
             })
+            
+            # Broadcast mock analysis update
+            await manager.broadcast({
+                "type": "conversation_update",
+                "data": {"conversation_id": conversation_id}
+            })
     except Exception as e:
         print(f"[Agent] Error in negotiation: {e}")
         import traceback
         traceback.print_exc()
         # Add error message to conversation
-        state.conversations[conversation_id].append({
-            "id": f"msg_{len(state.conversations[conversation_id])}",
-            "timestamp": datetime.now().isoformat(),
-            "agent": "system",
-            "type": "message",
-            "content": f"Agent analysis encountered an error: {str(e)}"
-        })
+        if conversation_id in state.conversations:
+            state.conversations[conversation_id].append({
+                "id": f"msg_{len(state.conversations[conversation_id])}",
+                "timestamp": datetime.now().isoformat(),
+                "agent": "system",
+                "type": "message",
+                "content": f"Agent analysis encountered an error: {str(e)}"
+            })
+            
+            # Broadcast error update
+            await manager.broadcast({
+                "type": "conversation_update",
+                "data": {"conversation_id": conversation_id}
+            })
 
 @app.post("/api/workflow/start")
 async def start_workflow(req: WorkflowRequest, background_tasks: BackgroundTasks):
@@ -1230,6 +1367,198 @@ async def get_latest_conversation():
     latest_id = max(state.conversations.keys(), key=lambda k: len(state.conversations[k]))
     messages = state.conversations[latest_id]
     return {"conversation_id": latest_id, "messages": messages}
+
+
+# ============================================================================
+# PyCardano Transaction Building
+# ============================================================================
+
+@app.post("/api/cardano/build-tx")
+async def build_settlement_tx(req: Dict):
+    """Build a real Cardano settlement transaction using PyCardano."""
+    if not CARDANO_TX_AVAILABLE:
+        return {
+            "success": False,
+            "error": "PyCardano not available. Install: pip install pycardano",
+            "tx_cbor": None
+        }
+    
+    try:
+        tx_builder = get_tx_builder()
+        
+        params = LoanSettlementParams(
+            borrower_address=req.get("borrower_address"),
+            lender_address=req.get("lender_address"),
+            principal=int(req.get("principal", 0) * 1_000_000),  # Convert ADA to lovelace
+            interest_amount=int(req.get("interest_amount", 0) * 1_000_000),
+            validator_script_hash=req.get("validator_script_hash")
+        )
+        
+        result = tx_builder.build_settlement_tx(params)
+        return result
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "tx_cbor": None
+        }
+
+
+@app.post("/api/cardano/estimate-fee")
+async def estimate_tx_fee(req: Dict):
+    """Estimate transaction fee."""
+    if not CARDANO_TX_AVAILABLE:
+        return {
+            "success": False,
+            "fee": 0,
+            "error": "PyCardano not available"
+        }
+    
+    try:
+        tx_builder = get_tx_builder()
+        
+        params = LoanSettlementParams(
+            borrower_address=req.get("borrower_address"),
+            lender_address=req.get("lender_address"),
+            principal=int(req.get("principal", 0) * 1_000_000),
+            interest_amount=int(req.get("interest_amount", 0) * 1_000_000)
+        )
+        
+        result = tx_builder.estimate_fee(params)
+        return result
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "fee": 0,
+            "error": str(e)
+        }
+
+
+# ============================================================================
+# Multi-Agent Negotiation
+# ============================================================================
+
+@app.post("/api/negotiation/multi-agent/create")
+async def create_multi_agent_negotiation(req: Dict):
+    """Create a new multi-agent negotiation session."""
+    if not AGENTS_AVAILABLE:
+        return {
+            "success": False,
+            "error": "Agents not available"
+        }
+    
+    try:
+        manager = get_negotiation_manager()
+        
+        negotiation = manager.create_negotiation(
+            borrowers=req.get("borrowers", []),
+            lenders=req.get("lenders", []),
+            loan_terms=req.get("loan_terms", {})
+        )
+        
+        return {
+            "success": True,
+            "negotiation_id": negotiation.negotiation_id,
+            "participants": len(negotiation.participants),
+            "status": negotiation.status
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+@app.post("/api/negotiation/multi-agent/{negotiation_id}/round")
+async def run_negotiation_round(negotiation_id: str):
+    """Run a round of multi-agent negotiation."""
+    if not AGENTS_AVAILABLE:
+        return {
+            "success": False,
+            "error": "Agents not available"
+        }
+    
+    try:
+        manager = get_negotiation_manager()
+        result = await manager.run_negotiation_round(negotiation_id)
+        return result
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+@app.get("/api/negotiation/multi-agent/{negotiation_id}")
+async def get_multi_agent_negotiation(negotiation_id: str):
+    """Get multi-agent negotiation details."""
+    if not AGENTS_AVAILABLE:
+        return {
+            "success": False,
+            "error": "Agents not available"
+        }
+    
+    try:
+        manager = get_negotiation_manager()
+        negotiation = manager.get_negotiation(negotiation_id)
+        
+        if not negotiation:
+            return {
+                "success": False,
+                "error": "Negotiation not found"
+            }
+        
+        return {
+            "success": True,
+            "negotiation_id": negotiation.negotiation_id,
+            "status": negotiation.status,
+            "rounds": negotiation.rounds,
+            "participants": [
+                {
+                    "agent_id": p.agent_id,
+                    "role": p.role.value,
+                    "address": p.address,
+                    "current_offer": p.current_offer
+                }
+                for p in negotiation.participants
+            ],
+            "loan_terms": negotiation.loan_terms
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+@app.get("/api/negotiation/multi-agent")
+async def list_multi_agent_negotiations():
+    """List all multi-agent negotiations."""
+    if not AGENTS_AVAILABLE:
+        return {
+            "success": False,
+            "negotiations": []
+        }
+    
+    try:
+        manager = get_negotiation_manager()
+        negotiations = manager.list_negotiations()
+        return {
+            "success": True,
+            "negotiations": negotiations
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "negotiations": []
+        }
 
 
 # ============================================================================
