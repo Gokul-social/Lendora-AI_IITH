@@ -1,0 +1,90 @@
+# Vercel ignore file - exclude large dependencies and unnecessary files
+
+# Large AI/ML dependencies (too large for serverless functions)
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Node modules (for frontend, handled separately)
+node_modules/
+frontend/
+
+# Large model files and data
+*.pth
+*.pt
+*.h5
+*.ckpt
+*.safetensors
+*.bin
+*.onnx
+*.tflite
+models/
+checkpoints/
+weights/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+*.so
+*.dylib
+*.dll
+
+# Logs and temporary files
+logs/
+*.log
+*.tmp
+*.temp
+.DS_Store
+.env
+.env.local
+
+# Git and version control
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Docker files (not needed for Vercel)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Test files
+tests/
+test_*.py
+*_test.py
+__tests__/
+
+# Cardano node data (too large)
+cardano-node/
+node-data/
+node-ipc/
+
+# Midnight compiled contracts
+midnight/*.compact
+
+# Hydra keys and data
+hydra/keys/
+*.skey
+*.vkey
+
+# Large Python packages that should be excluded
+# (These will be installed via requirements.txt but shouldn't be in source)
+*.whl
+*.tar.gz
+

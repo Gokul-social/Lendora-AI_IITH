@@ -89,23 +89,36 @@ docker run -d \
 
 ### Backend Deployment (Serverless)
 
+**IMPORTANT:** Vercel has a 250MB unzipped size limit for serverless functions. The full backend with AI dependencies (CrewAI, LangChain, etc.) exceeds this limit.
+
+**Recommended Approach:**
+- **Deploy frontend to Vercel** (works perfectly)
+- **Deploy backend to Railway/Render** (supports full AI features)
+
+**If deploying backend to Vercel (minimal mode only):**
+
 1. **Deploy Backend:**
    ```bash
-   vercel --prod
+   vercel --prod --local-config vercel-backend.json
    ```
 
-2. **Set Environment Variables:**
-   ```bash
-   vercel env add OLLAMA_BASE_URL
-   vercel env add HYDRA_NODE_URL
-   vercel env add HYDRA_MODE
-   # ... add all required env vars
-   ```
-
-3. **Note:** 
+2. **Note:** 
+   - Only basic API endpoints available (no AI features)
+   - Heavy dependencies excluded via `.vercelignore`
    - Ollama cannot run on Vercel (serverless limitation)
    - Use external Ollama service or disable AI agents
    - Hydra node must be external
+
+3. **For full AI features, use Railway or Render instead:**
+   ```bash
+   # Railway (recommended)
+   railway login
+   railway init
+   railway up
+   
+   # Or Render
+   # Connect GitHub repo and select docker-compose.yml
+   ```
 
 ---
 
@@ -214,14 +227,22 @@ VITE_WS_URL=ws://localhost:8000/ws
 ### Vercel
 
 **Limitations:**
+- **250MB unzipped size limit** for serverless functions (backend with AI dependencies exceeds this)
 - No persistent storage (use external database)
 - Ollama cannot run (use external service)
 - WebSocket support is limited (consider alternatives)
+- 10-second function timeout (too short for AI negotiations)
 
 **Recommendations:**
-- Deploy frontend to Vercel
-- Deploy backend to Railway, Render, or Fly.io
+- **Deploy frontend to Vercel** (works perfectly, no size issues)
+- **Deploy backend to Railway, Render, or Fly.io** (supports full AI features)
 - Use external Ollama service
+- For minimal API (no AI), backend can work on Vercel with reduced dependencies
+
+**Size Optimization:**
+- Use `.vercelignore` to exclude large files
+- Minimal `api/requirements.txt` excludes heavy AI packages
+- Backend falls back to minimal mode if dependencies too large
 
 ### Railway
 

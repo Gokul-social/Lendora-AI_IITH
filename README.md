@@ -21,24 +21,41 @@ docker-compose -f docker-compose.prod.yml up -d
 
 ### Vercel Deployment (Cloud)
 
-```bash
-# Deploy frontend only
-vercel --prod
+**IMPORTANT:** Vercel has a 250MB limit for serverless functions. The full backend with AI dependencies exceeds this limit.
 
-# Deploy backend only (from project root)
-vercel --prod --local-config vercel-backend.json
-```
+**Recommended Deployment Strategy:**
+
+1. **Frontend on Vercel** (Recommended):
+   ```bash
+   vercel --prod
+   ```
+   - Deploys React frontend successfully
+   - Fast, reliable hosting
+   - No size limitations for static assets
+
+2. **Backend on Railway/Render** (Recommended for full AI features):
+   - Deploy backend separately to Railway or Render
+   - These platforms support larger dependencies and longer timeouts
+   - Full AI capabilities with Ollama integration
+
+3. **Backend on Vercel** (Minimal mode only):
+   ```bash
+   vercel --prod --local-config vercel-backend.json
+   ```
+   - Only basic API endpoints (no AI features)
+   - Excludes heavy dependencies to stay under 250MB limit
+   - Use this only if you don't need AI negotiation features
 
 **Vercel Dashboard Setup:**
 1. Go to your project settings
 2. Add these environment variables:
-   - `VITE_API_URL` = `https://your-backend-url.vercel.app`
-   - `VITE_WS_URL` = `wss://your-backend-url.vercel.app`
+   - `VITE_API_URL` = `https://your-backend-url.railway.app` (or Render URL)
+   - `VITE_WS_URL` = `wss://your-backend-url.railway.app` (or Render URL)
 
-**Vercel Access Points:**
+**Access Points:**
 - Frontend: https://your-project.vercel.app
-- Backend API: https://your-backend.vercel.app
-- API Documentation: https://your-backend.vercel.app/docs
+- Backend API: https://your-backend.railway.app (or Render)
+- API Documentation: https://your-backend.railway.app/docs
 
 **Docker Access Points:**
 - Frontend: http://localhost:80
