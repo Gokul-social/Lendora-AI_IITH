@@ -22,42 +22,30 @@ cd frontend/Dashboard && npm run dev
 
 ## Architecture
 
-```
-    Borrower                     Midnight                      Lender
-       |                            |                            |
-       |-- Credit Score (PRIVATE) ->|                            |
-       |                            |-- is_eligible: true ------>|
-       |                            |   (ZK Proof - score hidden)|
-       |                            |                            |
-       |                            |<---- Loan Offer -----------|
-       |                            |                            |
-       v                            v                            v
-                        +-------------------+
-                        |  AI Agent (Lenny) |
-                        |  Llama 3 (Local)  |
-                        +-------------------+
-                                 |
-                                 v
-                        +-------------------+
-                        |   Hydra Head      |
-                        |  (Off-chain L2)   |
-                        +-------------------+
-                                 |
-                         Negotiate (0 gas!)
-                         Multiple rounds
-                                 |
-                                 v
-                        +-------------------+
-                        |  Aiken Validator  |
-                        |  (Settlement L1)  |
-                        +-------------------+
-                                 |
-                         Verify Dual Sig
-                                 |
-                                 v
-                        +-------------------+
-                        |  LOAN DISBURSED!  |
-                        +-------------------+
+```mermaid
+sequenceDiagram
+    participant B as Borrower
+    participant M as Midnight
+    participant L as Lender
+    participant A as AI Agent (Lenny)
+    participant H as Hydra Head
+    participant V as Aiken Validator
+    
+    B->>M: Submit Credit Score (private)
+    M->>L: is_eligible: true (ZK proof)
+    Note over M,L: Score remains HIDDEN!
+    L->>A: Loan Offer (8.5%)
+    A->>A: Analyze with Llama 3
+    A->>H: Open Hydra Head
+    loop Off-chain Negotiation
+        A->>H: Counter-offer
+        H->>H: Zero gas!
+    end
+    A->>H: Accept Final Terms (7.0%)
+    H->>V: Close Head + Settlement Tx
+    V->>V: Verify Dual Signature
+    V->>B: Loan Disbursed!
+    Note over B,V: Saved 1.5% through negotiation!
 ```
 
 ---
@@ -273,36 +261,6 @@ Lendora-AI/
 ├── logs/
 │   └── xai_decisions.jsonl     # AI decision audit trail
 └── README.md
-```
-
----
-
-## Workflow Sequence
-
-```mermaid
-sequenceDiagram
-    participant B as Borrower
-    participant M as Midnight
-    participant L as Lender
-    participant A as AI Agent (Lenny)
-    participant H as Hydra Head
-    participant V as Aiken Validator
-    
-    B->>M: Submit Credit Score (private)
-    M->>L: is_eligible: true (ZK proof)
-    Note over M,L: Score remains HIDDEN!
-    L->>A: Loan Offer (8.5%)
-    A->>A: Analyze with Llama 3
-    A->>H: Open Hydra Head
-    loop Off-chain Negotiation
-        A->>H: Counter-offer
-        H->>H: Zero gas!
-    end
-    A->>H: Accept Final Terms (7.0%)
-    H->>V: Close Head + Settlement Tx
-    V->>V: Verify Dual Signature
-    V->>B: Loan Disbursed!
-    Note over B,V: Saved 1.5% through negotiation!
 ```
 
 ---
