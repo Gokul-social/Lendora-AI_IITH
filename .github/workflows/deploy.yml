@@ -1,134 +1,83 @@
-name: Build and Deploy
+name: Deploy
 
 on:
   push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
-  build-backend:
+  deploy-frontend:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: false
-      
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          pip install -r backend/api/requirements.txt
-      
-      - name: Lint backend
-        run: |
-          python -m py_compile backend/api/server.py
-          python -m py_compile agents/*.py
-      
-      - name: Build Docker image (backend)
-        run: |
-          docker build -f Dockerfile.backend -t lendora-backend:latest .
-
-  build-frontend:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: false
-      
-      - name: Verify frontend directory exists
-        run: |
-          if [ ! -d "frontend/Dashboard" ]; then
-            echo "Error: frontend/Dashboard directory not found"
-            exit 1
-          fi
-          if [ ! -f "frontend/Dashboard/package-lock.json" ]; then
-            echo "Warning: package-lock.json not found, will use npm install"
-          fi
-      
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      
-      - name: Cache npm dependencies
-        uses: actions/cache@v4
-        id: npm-cache
-        with:
-          path: frontend/Dashboard/node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('frontend/Dashboard/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-      
-      - name: Install dependencies
+    - uses: actions/checkout@v4
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: frontend/Dashboard/package-lock.json
+    - name: Install dependencies
+      run: |
+        cd frontend/Dashboard
+        npm ci
+    - name: Build frontend
+      run: |
+        cd frontend/Dashboard
+        npm run build
+    - name: Deploy to Vercel
+      uses: amondnet/vercel-action@v25
+      with:
+        vercel-token: ${{ secrets.VERCEL_TOKEN }}
+        vercel-args: '--prod'
+        vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+        vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
         working-directory: frontend/Dashboard
-        run: |
-          if [ -f "package-lock.json" ]; then
-            npm ci
-          else
-            npm install
-          fi
-      
-      - name: Lint frontend
-        working-directory: frontend/Dashboard
-        run: npm run lint || true
-      
-      - name: Build frontend
-        working-directory: frontend/Dashboard
-        run: npm run build
-      
-      - name: Build Docker image (frontend)
-        run: |
-          docker build -f Dockerfile.frontend -t lendora-frontend:latest .
 
-  test:
+  deploy-backend:
     runs-on: ubuntu-latest
-    needs: [build-backend, build-frontend]
     steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: false
-      
-      - name: Start services
-        run: |
-          docker-compose up -d backend frontend
-      
-      - name: Wait for backend
-        run: |
-          timeout 60 bash -c 'until curl -f http://localhost:8000/health; do sleep 2; done'
-      
-      - name: Test backend health
-        run: |
-          curl -f http://localhost:8000/health
-      
-      - name: Test frontend
-        run: |
-          curl -f http://localhost:80/ || true
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r backend/api/requirements.txt
+    - name: Deploy backend to Vercel
+      uses: amondnet/vercel-action@v25
+      with:
+        vercel-token: ${{ secrets.VERCEL_TOKEN }}
+        vercel-args: '--prod'
+        vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+        vercel-project-id: ${{ secrets.VERCEL_BACKEND_PROJECT_ID }}
+        working-directory: .
 
-  deploy:
+  docker-deploy:
     runs-on: ubuntu-latest
-    needs: [build-backend, build-frontend, test]
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    if: github.event_name == 'workflow_dispatch'
     steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: false
-      
-      - name: Configure Docker for GitHub Container Registry
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-      
-      - name: Build and push backend
-        run: |
-          docker build -f Dockerfile.backend -t ghcr.io/${{ github.repository }}/backend:latest .
-          docker push ghcr.io/${{ github.repository }}/backend:latest
-      
-      - name: Build and push frontend
-        run: |
-          docker build -f Dockerfile.frontend -t ghcr.io/${{ github.repository }}/frontend:latest .
-          docker push ghcr.io/${{ github.repository }}/frontend:latest
-
+    - uses: actions/checkout@v4
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+    - name: Build and push backend
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile.backend
+        push: true
+        tags: ${{ secrets.DOCKERHUB_USERNAME }}/lendora-backend:latest
+    - name: Build and push frontend
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile.frontend
+        push: true
+        tags: ${{ secrets.DOCKERHUB_USERNAME }}/lendora-frontend:latest

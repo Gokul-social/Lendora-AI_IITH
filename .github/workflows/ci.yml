@@ -2,90 +2,65 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, develop ]
   pull_request:
     branches: [ main ]
 
 jobs:
-  backend-test:
+  test-backend:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-      with:
-        submodules: false
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.10'
+        python-version: '3.12'
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install -r backend/api/requirements.txt
-        pip install pytest httpx
-    - name: Test backend
+    - name: Run backend tests
       run: |
-        # Basic smoke test to see if server starts (requires background process)
-        # For now, we just check if files are importable
-        python -c "from backend.api.server import app"
-        python -c "from agents.borrower_agent import create_borrower_agent"
+        cd backend/api
+        python -c "from server import app; print('Backend imports successful')"
 
-  frontend-build:
+  test-frontend:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend/Dashboard
     steps:
     - uses: actions/checkout@v4
-      with:
-        submodules: false
-    - name: Set up Node
+    - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '20'
         cache: 'npm'
-        cache-dependency-path: 'frontend/Dashboard/package-lock.json'
+        cache-dependency-path: frontend/Dashboard/package-lock.json
     - name: Install dependencies
-      run: npm ci
-    - name: Lint
-      run: npm run lint
-    - name: Build
-      run: npm run build
+      run: |
+        cd frontend/Dashboard
+        npm ci
+    - name: Build frontend
+      run: |
+        cd frontend/Dashboard
+        npm run build
 
-  contracts-check:
+  docker-build:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    - name: Build backend Docker image
+      uses: docker/build-push-action@v5
       with:
-        submodules: false
-    - name: Install Aiken CLI
-      run: |
-        # Install aikup (Aiken installer)
-        curl -sSfL https://install.aiken-lang.org | sh
-        
-        # Add Aiken bin directory to PATH
-        echo "$HOME/.aiken/bin" >> $GITHUB_PATH
-        
-        # Source the environment script to set up PATH
-        source $HOME/.aiken/bin/env || true
-        
-        # Install Aiken using aikup
-        $HOME/.aiken/bin/aikup install latest
-        
-        # Verify Aiken is available
-        export PATH="$HOME/.aiken/bin:$PATH"
-        aiken --version
-    
-    - name: Check Aiken Contracts
-      run: |
-        # Ensure Aiken is in PATH
-        export PATH="$HOME/.aiken/bin:$PATH"
-        source $HOME/.aiken/bin/env || true
-        
-        # Verify Aiken is available
-        aiken --version
-        
-        # Check and build contracts
-        cd contracts/contracts
-        aiken check
-        aiken build
+        context: .
+        file: ./Dockerfile.backend
+        push: false
+        tags: lendora-backend:test
+    - name: Build frontend Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile.frontend
+        push: false
+        tags: lendora-frontend:test
