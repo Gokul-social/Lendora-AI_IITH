@@ -1,8 +1,8 @@
 # 🚀 Lendora AI
 
-> **Privacy-First DeFi Lending on Cardano 2025**
+> **Privacy-First DeFi Lending on Cardano 2025 with Immersive 3D Interface**
 
-Lendora is a decentralized lending protocol where AI agents negotiate loans in private **Hydra Heads** to avoid gas fees, using **Midnight ZK-Proofs** for credit scoring.
+Lendora is a next-generation decentralized lending protocol where AI agents negotiate loans in private **Hydra Heads** to avoid gas fees, using **Midnight ZK-Proofs** for credit scoring, presented through a stunning **3D immersive dashboard**.
 
 ---
 
@@ -34,9 +34,9 @@ graph TD
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ Full Stack Architecture
 
-### The Cardano 2025 Stack
+### Backend: The Cardano 2025 Stack
 
 | Layer | Technology | Purpose |
 |-------|-----------|---------|
@@ -44,6 +44,75 @@ graph TD
 | **Scaling** | Hydra Head Protocol | Off-chain, zero-gas-fee negotiation |
 | **Settlement** | Aiken Smart Contracts | On-chain loan escrow & verification |
 | **Privacy** | Midnight Compact | Zero-knowledge credit scoring |
+| **API** | FastAPI + WebSockets | Real-time backend communication |
+
+### Frontend: Kasane-Cosmos Aesthetic
+
+| Component | Technology | Purpose |
+|-----------|-----------|---------|
+| **3D Engine** | React Three Fiber + Drei | Immersive 3D interface |
+| **Animations** | Framer Motion | Scroll-linked 3D transforms |
+| **UI Framework** | React + TypeScript + Vite | Fast, type-safe development |
+| **Styling** | Tailwind CSS | Glassmorphism & custom palettes |
+| **Theme** | next-themes | Dark/Light mode (Cyber-Noir/Foggy Future) |
+
+---
+
+## ✨ Features
+
+### Backend
+- 🤖 **Privacy-First AI**: Llama 3 runs locally via Ollama - no data leaves your machine
+- ⚡ **Zero Gas Negotiations**: Unlimited negotiation rounds in Hydra Heads
+- 🔐 **ZK Credit Scoring**: Prove creditworthiness without revealing your score
+- 🎯 **Explainable AI**: Every decision logged with reasoning (XAI)
+- 📡 **Real-Time Updates**: WebSocket support for live agent status
+
+### Frontend
+- 🎨 **3D Portal Login**: Rotating holographic cube with particle field background
+- 🎭 **Floating Dashboards**: Glassmorphic Bento grid cards with liquid distortion
+- 📊 **Kasane Scroll Effect**: Trade cards tilt in 3D space as you scroll
+- 🌐 **Agent Status Orb**: Pulsing 3D sphere showing real-time AI status
+- 🎬 **Camera Transitions**: Cinematic zoom animations between views
+- 🌓 **Dual Themes**: Cyber-Noir (dark) and Foggy Future (light) palettes
+
+---
+
+## 🚀 Quick Start
+
+See [QUICKSTART.md](./QUICKSTART.md) for detailed instructions.
+
+### 1. Backend API Server
+
+```bash
+cd backend/api
+pip install -r requirements.txt
+python server.py
+```
+
+Server runs at:
+- REST API: `http://localhost:8000`
+- WebSocket: `ws://localhost:8000/ws`
+- API Docs: `http://localhost:8000/docs`
+
+### 2. Frontend Dashboard
+
+```bash
+cd frontend/Dashboard
+npm install
+npm run dev
+```
+
+Dashboard runs at: `http://localhost:5173`
+
+### 3. AI Agent (Optional)
+
+```bash
+# Ensure Ollama is running first
+ollama serve
+
+# Run the Masumi agent
+python agents/borrower_agent.py
+```
 
 ---
 
@@ -51,92 +120,104 @@ graph TD
 
 ```
 lendora-ai/
-├── agents/                  # AI Agents (Python)
-│   ├── borrower_agent.py   # "Lenny" - The negotiator
+├── agents/                          # AI Agents (Python)
+│   ├── borrower_agent.py           # "Lenny" - The Masumi negotiator
 │   └── __init__.py
-├── hydra/                   # Hydra Head Integration
-│   ├── head_manager.py     # WebSocket client for Hydra node
-│   └── __init__.py
-├── contracts/               # Aiken Smart Contracts
+├── backend/
+│   └── api/
+│       ├── server.py                # FastAPI + WebSocket server
+│       └── requirements.txt
+├── contracts/                       # Aiken Smart Contracts
 │   └── validators/
-│       └── lendora.ak      # Settlement validator
-├── midnight/                # Privacy Layer
-│   └── credit_score.compact # ZK credit check
-├── logs/                    # XAI decision logs
-├── requirements.txt         # Python dependencies
-└── README.md               # You are here!
+│       └── lendora.ak              # Settlement validator
+├── frontend/
+│   └── Dashboard/                   # Immersive 3D Dashboard
+│       ├── src/
+│       │   ├── components/
+│       │   │   ├── 3d/             # HeroCube, ParticleField, AgentStatusOrb
+│       │   │   └── dashboard/      # TradeTimeline with Kasane scroll
+│       │   ├── lib/api/            # API client & WebSocket manager
+│       │   ├── pages/              # LoginGate, DashboardLayout
+│       │   └── App.tsx
+│       ├── tailwind.config.ts      # Kasane-Cosmos color palettes
+│       └── package.json
+├── hydra/                           # Hydra Head Integration
+│   ├── head_manager.py             # WebSocket client for Hydra node
+│   └── __init__.py
+├── midnight/                        # Privacy Layer
+│   └── credit_score.compact        # ZK credit check
+├── logs/                            # XAI decision logs
+├── QUICKSTART.md                    # Quick setup guide
+├── requirements.txt                 # Python dependencies
+└── README.md                        # You are here!
 ```
 
 ---
 
-## 🛠️ Setup
+## 🎨 UI Screenshots & Design
 
-### Prerequisites
+### Login Portal
+- **3D HeroCube** - Rotating holographic cube (glass in light mode, neon wireframe in dark mode)
+- **Particle Field** - 5000 WebGL particles react to mouse movement
+- **Camera Zoom** - Portal entrance animation on wallet connect
 
-1. **Ollama** (for local Llama 3)
-   ```bash
-   # Install Ollama
-   curl -fsSL https://ollama.com/install.sh | sh
-   
-   # Pull Llama 3
-   ollama pull llama3
-   
-   # Start Ollama server
-   ollama serve
-   ```
+### Dashboard Cockpit
+- **Bento Grid Layout** - Floating glassmorphic cards
+- **Agent Status Orb** - 3D pulsing sphere (green = profiting, amber = negotiating)
+- **CountUp Animations** - Balance animates to final value
+- **Liquid Distortion** - Cards morph on hover
 
-2. **Hydra Node** (for state channels)
-   ```bash
-   # Follow the official guide:
-   # https://hydra.family/head-protocol/docs/getting-started
-   
-   # The Python code expects a node at: ws://localhost:4001
-   ```
+### Trade Timeline
+- **Kasane Scroll Effect** - Cards tilt backward and blur as you scroll
+- **3D Depth** - Parallax layers create spatial depth
+- **Real-Time Updates** - WebSocket-powered live trade notifications
 
-3. **Aiken** (for smart contracts)
-   ```bash
-   # Install Aiken
-   cargo install aiken
-   
-   # Check installation
-   aiken --version
-   ```
+---
 
-4. **Python 3.10+**
-   ```bash
-   # Create virtual environment
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   
-   # Install dependencies
-   pip install -r requirements.txt
-   ```
+## 🛠️ Prerequisites
 
-### Quick Start
+### 1. Ollama (for local Llama 3)
+```bash
+# Install Ollama
+curl -fsSL https://ollama.com/install.sh | sh
 
-1. **Clone the repository**
-   ```bash
-   git clone <your-repo>
-   cd lendora-ai
-   ```
+# Pull Llama 3
+ollama pull llama3
 
-2. **Set up Python environment**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate
-   pip install -r requirements.txt
-   ```
+# Start Ollama server
+ollama serve
+```
 
-3. **Run the Borrower Agent**
-   ```bash
-   python agents/borrower_agent.py
-   ```
+### 2. Node.js 18+ (for frontend)
+```bash
+# Check version
+node --version
+npm --version
+```
 
-4. **Compile Aiken Contracts**
-   ```bash
-   cd contracts
-   aiken build
-   ```
+### 3. Python 3.10+ (for backend)
+```bash
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
+
+### 4. Aiken (for smart contracts - OPTIONAL)
+```bash
+# Install Aiken
+cargo install aiken
+
+# Check installation
+aiken --version
+```
+
+### 5. Hydra Node (for state channels - OPTIONAL)
+```bash
+# Follow the official guide:
+# https://hydra.family/head-protocol/docs/getting-started
+
+# The Python code expects a node at: ws://localhost:4001
+```
 
 ---
 
@@ -155,6 +236,8 @@ llama3_llm = ChatOpenAI(
     temperature=0.7,
 )
 ```
+
+**✅ Privacy Verified**: No OpenAI GPT-4 - All AI processing happens locally.
 
 ### Custom Tools
 
@@ -305,19 +388,33 @@ sequenceDiagram
 
 ## 🚧 Current Status
 
-### ✅ Implemented
+### ✅ Backend Implemented
 - [x] AI agent with local Llama 3
 - [x] Hydra WebSocket client
-- [x] Aiken settlement validator
-- [x] Midnight ZK credit check (mock)
+- [x] Aiken settlement validator with tests
+- [x] Midnight ZK credit check (syntactically correct)
 - [x] XAI decision logging
+- [x] FastAPI REST API server
+- [x] WebSocket real-time updates
 
-### 🚧 TODO
+### ✅ Frontend Implemented
+- [x] 3D immersive login portal (HeroCube + ParticleField)
+- [x] Floating glassmorphic dashboard (Bento grid)
+- [x] Agent Status Orb (3D pulsing sphere)
+- [x] Kasane scroll effect (3D trade timeline)
+- [x] Cyber-Noir/Foggy Future dual themes
+- [x] API client with WebSocket integration
+- [x] CountUp animations and liquid distortion effects
+
+### 🚧 Future Enhancements
+- [ ] Connect to actual Hydra node (currently mocked)
 - [ ] Actual Midnight network integration
 - [ ] Real Cardano transaction building (PyCardano)
 - [ ] Lender agent counterpart
-- [ ] Web dashboard for monitoring
+- [ ] Holographic 3D analytics charts
 - [ ] Oracle integration for credit scores
+- [ ] Wallet connection (Nami, Eternl, Yoroi)
+- [ ] Mobile responsive 3D (optimized particles)
 
 ---
 
@@ -334,11 +431,19 @@ This is a demonstration project showcasing the Cardano 2025 stack. Feel free to:
 
 ## 📚 Resources
 
+### Backend/Blockchain
 - [Hydra Documentation](https://hydra.family/head-protocol/docs/)
 - [Aiken Language Guide](https://aiken-lang.org/)
 - [Midnight Developer Portal](https://midnight.network/)
 - [CrewAI Documentation](https://docs.crewai.com/)
 - [Ollama](https://ollama.com/)
+
+### Frontend/3D
+- [React Three Fiber](https://docs.pmnd.rs/react-three-fiber/)
+- [Drei (R3F Helpers)](https://github.com/pmndrs/drei)
+- [Framer Motion](https://www.framer.com/motion/)
+- [Tailwind CSS](https://tailwindcss.com/)
+- [Three.js](https://threejs.org/)
 
 ---
 
