@@ -40,12 +40,24 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: frontend/Dashboard/package-lock.json
+      
+      - name: Cache npm dependencies
+        uses: actions/cache@v4
+        id: npm-cache
+        with:
+          path: frontend/Dashboard/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('frontend/Dashboard/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
       
       - name: Install dependencies
         working-directory: frontend/Dashboard
-        run: npm ci
+        run: |
+          if [ -f "package-lock.json" ]; then
+            npm ci
+          else
+            npm install
+          fi
       
       - name: Lint frontend
         working-directory: frontend/Dashboard
