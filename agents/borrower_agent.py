@@ -1,29 +1,27 @@
 """
 Lendora AI - Borrower Agent (Lenny)
-Privacy-First DeFi Lending on Cardano
+Privacy-First DeFi Lending on Ethereum
 
 Complete Architecture:
-    Borrower --> Midnight (submit credit score privately)
+    Borrower --> ZK Credit Check (Circom/SnarkJS)
                     |
             is_eligible: true (public, ZK proof)
                     |
                     v
-    Lender <-- Midnight
+    Lender <-- ZK Proof
        |
     Loan Offer
        |
        v
     AI Agent (Lenny) --> Analyze with Llama 3
                               |
-                        Open Hydra Head
-                              |
-                      Negotiate (off-chain, zero gas)
+                      Negotiate (Ethereum L2)
                               |
                         Accept Final Terms
                               |
-                    Close Head --> Settlement Tx
+                    Ethereum Settlement Tx
                               |
-                        Aiken Validator (verify dual sig)
+                        Solidity Contract (verify)
                               |
                         Loan Disbursed!
 """
@@ -183,24 +181,11 @@ class MidnightClient:
 
 
 # ============================================================================
-# Integrated Hydra + Masumi Manager
+# Hydra and Masumi removed - using Ethereum L2 instead
 # ============================================================================
 
-# Import integrated client
-try:
-    from ..hydra.integrated_client import IntegratedHydraMasumiClient
-    INTEGRATED_CLIENT_AVAILABLE = True
-except ImportError:
-    INTEGRATED_CLIENT_AVAILABLE = False
-    print("[BorrowerAgent] Warning: Integrated client not available")
-
-# Import Hydra configuration
-try:
-    from ..hydra.hydra_config import get_hydra_node_url
-    HYDRA_CONFIG_AVAILABLE = True
-except ImportError:
-    HYDRA_CONFIG_AVAILABLE = False
-    print("[BorrowerAgent] Warning: Hydra config not available, using defaults")
+INTEGRATED_CLIENT_AVAILABLE = False
+HYDRA_CONFIG_AVAILABLE = False
 
 
 class HydraHeadManager:

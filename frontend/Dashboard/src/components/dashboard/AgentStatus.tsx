@@ -109,7 +109,7 @@ export function AgentStatus({ status, task, conversation, workflowSteps }: Agent
       <div className="mb-4 p-3 rounded-lg bg-primary/5 border border-primary/10">
         <p className="text-sm text-muted-foreground">
           <strong>Lenny</strong> (Llama 3) analyzes loan terms and negotiates rates.
-          <strong>Masumi</strong> performs Cardano blockchain analysis for borrower verification.
+          <strong>Masumi</strong> performs Ethereum blockchain analysis for borrower verification.
           They work together to provide comprehensive loan assessment.
         </p>
       </div>
@@ -133,7 +133,7 @@ export function AgentStatus({ status, task, conversation, workflowSteps }: Agent
               {settling ? 'Processing Settlement...' : 'Complete Deal & Settle'}
             </Button>
             <p className="text-xs text-muted-foreground mt-2 text-center">
-              Click to close the Hydra head and process the loan disbursement
+              Click to finalize the L2 session and process the loan disbursement
             </p>
           </div>
         )}

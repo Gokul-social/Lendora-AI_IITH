@@ -18,12 +18,12 @@ interface Conversation {
   }>;
 }
 
-interface HydraStatus {
-  mode: 'hydra' | 'direct' | 'unavailable';
+interface L2Status {
+  mode: 'l2' | 'direct' | 'unavailable';
   connected?: boolean;
-  head_state?: string;
+  network_state?: string;
   active_negotiations?: number;
-  current_head_id?: string;
+  current_session_id?: string;
 }
 
 interface WorkflowStep {
@@ -38,7 +38,7 @@ interface WebSocketState {
   isConnected: boolean;
   agentStatus: AgentStatus;
   currentConversation: Conversation | null;
-  hydraStatus: HydraStatus;
+  l2Status: L2Status;
   workflowSteps: WorkflowStep[];
   stats: {
     totalBalance: number;
@@ -48,19 +48,19 @@ interface WebSocketState {
   };
 }
 
-const WS_URL = process.env.REACT_APP_WS_URL || 'ws://localhost:8000/ws';
+const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws';
 
 export function useWebSocket() {
   const [state, setState] = useState<WebSocketState>({
     isConnected: false,
     agentStatus: { status: 'idle' },
     currentConversation: null,
-    hydraStatus: { mode: 'unavailable' },
+    l2Status: { mode: 'unavailable' },
     workflowSteps: [],
     stats: {
-      totalBalance: 125450.75,
-      activeLoans: 8,
-      totalProfit: 12543.50,
+      totalBalance: 0,
+      activeLoans: 0,
+      totalProfit: 0,
       agentStatus: 'idle'
     }
   });
@@ -135,10 +135,17 @@ export function useWebSocket() {
         fetchLatestConversation();
         break;
 
-      case 'hydra_status':
+      case 'l2_status':
+      case 'hydra_status': // Keep backward compatibility
         setState(prev => ({
           ...prev,
-          hydraStatus: message.data
+          l2Status: {
+            mode: message.data.mode === 'hydra' ? 'l2' : message.data.mode,
+            connected: message.data.connected,
+            network_state: message.data.head_state || message.data.network_state,
+            active_negotiations: message.data.active_negotiations,
+            current_session_id: message.data.current_head_id || message.data.current_session_id
+          }
         }));
         break;
 

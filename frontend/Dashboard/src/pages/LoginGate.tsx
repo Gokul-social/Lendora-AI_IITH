@@ -15,7 +15,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Wallet, ChevronDown, ExternalLink, AlertCircle, Loader2, Sun, Moon } from 'lucide-react';
 import { useWallet } from '@/hooks/useWallet';
 import { useTheme } from 'next-themes';
-import type { WalletName } from '@/lib/wallet/cardano-wallet';
+import type { WalletName } from '@/lib/wallet/ethereum-wallet';
 
 const ANIMATION_DURATION = 1500;
 
@@ -60,6 +60,15 @@ export default function LoginGate() {
     };
 
     const installedCount = installedWallets.filter(w => w.installed).length;
+
+    // Wallet icons mapping
+    const walletIcons: Record<string, string> = {
+        metamask: '🦊',
+        coinbase: '🔵',
+        walletconnect: '🔗',
+        trust: '🛡️',
+        rainbow: '🌈',
+    };
 
     return (
         <div className="relative w-full h-screen overflow-hidden bg-background transition-colors duration-500">
@@ -106,7 +115,7 @@ export default function LoginGate() {
                         Lendora AI
                     </h1>
                     <p className="text-lg md:text-2xl text-muted-foreground font-light">
-                        Privacy-First DeFi Lending on Cardano
+                        Privacy-First DeFi Lending on Ethereum
                     </p>
                 </motion.div>
 
@@ -132,12 +141,12 @@ export default function LoginGate() {
                                 <div className="space-y-1">
                                     <p className="text-sm font-mono text-foreground">{shortAddress}</p>
                                     <p className="text-xs text-muted-foreground">
-                                        {balance} ₳ • {network}
+                                        {balance} ETH • {network}
                                     </p>
                                 </div>
                             ) : (
                                 <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                                    Choose your Cardano wallet to access privacy-first DeFi lending with AI-powered negotiations
+                                    Connect your Ethereum wallet to access privacy-first DeFi lending with AI-powered negotiations
                                 </p>
                             )}
                         </div>
@@ -227,15 +236,13 @@ export default function LoginGate() {
                                                                     whileTap={{ scale: 0.98 }}
                                                                 >
                                                                     <div className="flex items-center gap-3">
-                                                                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                                                                            <span className="text-primary font-bold text-lg">
-                                                                                {wallet.name[0].toUpperCase()}
-                                                                            </span>
+                                                                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-xl">
+                                                                            {walletIcons[wallet.name] || '💳'}
                                                                         </div>
                                                                         <div>
-                                                                            <p className="font-semibold capitalize">{wallet.name}</p>
+                                                                            <p className="font-semibold">{wallet.displayName}</p>
                                                                             <p className="text-xs text-muted-foreground">
-                                                                                {wallet.name === 'eternl' ? 'Recommended' : 'Fast & Secure'}
+                                                                                {wallet.name === 'metamask' ? 'Recommended' : 'Ethereum Wallet'}
                                                                             </p>
                                                                         </div>
                                                                     </div>
@@ -250,15 +257,15 @@ export default function LoginGate() {
                                         <div className="text-center p-6 bg-muted/50 rounded-xl">
                                             <AlertCircle className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
                                             <p className="text-sm text-muted-foreground mb-4">
-                                                No Cardano wallets detected. Install one to continue.
+                                                No Ethereum wallets detected. Install one to continue.
                                             </p>
                                             <a
-                                                href="https://eternl.io"
+                                                href="https://metamask.io/download/"
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 className="text-sm text-primary hover:underline inline-flex items-center gap-1"
                                             >
-                                                Get Eternl Wallet
+                                                Get MetaMask
                                                 <ExternalLink className="w-3 h-3" />
                                             </a>
                                         </div>
@@ -299,7 +306,7 @@ export default function LoginGate() {
                     </div>
                     <div className="flex items-center gap-2 text-muted-foreground">
                         <div className="w-2 h-2 rounded-full bg-secondary animate-pulse" />
-                        <span>Hydra L2</span>
+                        <span>Arbitrum L2</span>
                     </div>
                     <div className="flex items-center gap-2 text-muted-foreground">
                         <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />

@@ -2,7 +2,31 @@
 
 **Privacy-First DeFi Lending**
 
-Lendora is a decentralized lending protocol that uses AI agents to negotiate loans in private Hydra Heads with zero gas fees, employing Midnight zero-knowledge proofs for credit scoring, and featuring an immersive dashboard interface.
+Lendora is a decentralized lending protocol that uses AI agents to negotiate loans with zero-knowledge proofs for credit scoring, and featuring an immersive dashboard interface.
+
+## 🚀 Ethereum Migration Status
+
+**Lendora AI is being migrated from Cardano to Ethereum L2 (Arbitrum/Optimism).**
+
+### ✅ Completed
+- Solidity smart contracts (LoanManager, CollateralVault, InterestRateModel, LiquidationEngine)
+- ZK circuit for credit scores (Circom)
+- Ethereum transaction builder (Web3.py)
+- Chainlink oracle integration
+- ZK proof generator (SnarkJS)
+
+### ⏳ In Progress
+- AI agent updates for Ethereum L2
+- Frontend wallet integration (MetaMask/WalletConnect)
+- Backend API updates
+
+See [ETHEREUM_MIGRATION.md](docs/ETHEREUM_MIGRATION.md) and [MIGRATION_SUMMARY.md](docs/MIGRATION_SUMMARY.md) for details.
+
+---
+
+## Cardano Stack (Legacy)
+
+The original Cardano-based implementation is still available but will be deprecated. See below for Cardano-specific documentation.
 
 ## Quick Start
 

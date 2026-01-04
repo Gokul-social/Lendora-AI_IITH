@@ -9,6 +9,11 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import LoginGate from "./pages/LoginGate";
 import DashboardLayout from "./pages/DashboardLayout";
+import Portfolio from "./pages/Portfolio";
+import Loans from "./pages/Loans";
+import Transactions from "./pages/Transactions";
+import Settings from "./pages/Settings";
+import { MainLayout } from "./components/layout/MainLayout";
 
 // Configure React Query
 const queryClient = new QueryClient({
@@ -30,7 +35,11 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<LoginGate />} />
-              <Route path="/dashboard" element={<DashboardLayout />} />
+              <Route path="/dashboard" element={<MainLayout><DashboardLayout /></MainLayout>} />
+              <Route path="/portfolio" element={<MainLayout><Portfolio /></MainLayout>} />
+              <Route path="/loans" element={<MainLayout><Loans /></MainLayout>} />
+              <Route path="/transactions" element={<MainLayout><Transactions /></MainLayout>} />
+              <Route path="/settings" element={<MainLayout><Settings /></MainLayout>} />
               <Route path="/legacy" element={<Index />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

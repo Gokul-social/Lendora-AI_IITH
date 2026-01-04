@@ -1,26 +1,24 @@
 """
 Lendora AI - Agents Module
-Privacy-First AI Agents for DeFi Lending on Cardano
+Privacy-First AI Agents for DeFi Lending on Ethereum
 
 Architecture:
     Lender --> Loan Offer --> AI Agent (Lenny)
                                   |
                             Analyze with Llama 3
                                   |
-                            Open Hydra Head
-                                  |
-                         Negotiate (off-chain)
+                         Negotiate (Ethereum L2)
                                   |
                             Accept Terms
                                   |
-                    Close Head --> Settlement Tx
+                    Ethereum Settlement Tx
                                   |
-                        Aiken Validator (verify dual sig)
+                        Solidity Contract (verify)
                                   |
                             Loan Disbursed!
 
 Agents:
-- Borrower Agent ("Lenny"): Analyzes offers, negotiates in Hydra, settles on-chain
+- Borrower Agent ("Lenny"): Analyzes offers, negotiates, settles on Ethereum
 - Lender Agent ("Luna"): Creates offers, evaluates risk, signs settlements
 """
 
@@ -37,8 +35,6 @@ from .lender_agent import (
     handle_negotiation_request,
     LendingPool,
 )
-from .masumi.crew import DegenCrew
-
 __all__ = [
     # Borrower Agent (Lenny)
     "create_borrower_agent",
@@ -51,6 +47,4 @@ __all__ = [
     "run_lender_agent",
     "handle_negotiation_request",
     "LendingPool",
-    # Masumi Cardano Agent
-    "DegenCrew",
 ]

@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => ({
   },
   optimizeDeps: {
     include: ["three", "lucide-react"],
-    exclude: ["@emurgo/cardano-serialization-lib-browser"],
+    exclude: [],
   },
   build: {
     rollupOptions: {

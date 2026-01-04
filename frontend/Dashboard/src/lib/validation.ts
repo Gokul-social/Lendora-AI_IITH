@@ -19,9 +19,9 @@ export function sanitizeString(input: string): string {
 }
 
 /**
- * Validate Cardano address format
+ * Validate Ethereum address format
  */
-export function validateCardanoAddress(address: string): boolean {
+export function validateEthereumAddress(address: string): boolean {
   if (!address || typeof address !== 'string') {
     return false;
   }
@@ -38,18 +38,12 @@ export function validateCardanoAddress(address: string): boolean {
     return false;
   }
   
-  // Cardano address validation - more lenient
-  // Mainnet addresses: addr1 followed by bech32 characters (typically 98-103 chars total)
-  // Testnet addresses: addr_test1 followed by bech32 characters (typically 104-109 chars total)
-  // Bech32 alphabet: a-z, 0-9 (excluding 1, b, i, o)
-  // We accept addresses that start with addr1 or addr_test1 and have reasonable length
-  const mainnetPattern = /^addr1[a-z0-9]{50,}$/i;
-  const testnetPattern = /^addr_test1[a-z0-9]{50,}$/i;
+  // Ethereum address validation
+  // Must start with 0x and be 42 characters (including 0x prefix)
+  // Followed by 40 hexadecimal characters
+  const ethereumPattern = /^0x[a-fA-F0-9]{40}$/;
   
-  // Check if it matches either pattern
-  const isValid = mainnetPattern.test(trimmed) || testnetPattern.test(trimmed);
-  
-  return isValid;
+  return ethereumPattern.test(trimmed);
 }
 
 /**
@@ -140,16 +134,16 @@ export function validateLoanFormData(data: Partial<LoanFormData>): {
   
   if (walletAddr && walletAddr.length > 0) {
     // Only validate if an address is actually provided
-    if (!validateCardanoAddress(walletAddr)) {
-      errors.push('Invalid wallet address format. Must start with addr1 or addr_test1');
+    if (!validateEthereumAddress(walletAddr)) {
+      errors.push('Invalid wallet address format. Must start with 0x and be 42 characters');
     } else {
       sanitized.walletAddress = sanitizeString(walletAddr);
     }
   } else {
     // Wallet address is optional - use placeholder if not provided
     sanitized.walletAddress = data.role === 'borrower' 
-      ? 'addr1_placeholder_borrower' 
-      : 'addr1_placeholder_lender';
+      ? '0x_placeholder_borrower' 
+      : '0x_placeholder_lender';
   }
   
   // Validate stablecoin
@@ -200,4 +194,3 @@ export function validateLoanFormData(data: Partial<LoanFormData>): {
   
   return { valid: true, data: sanitized as LoanFormData, errors: [] };
 }
-

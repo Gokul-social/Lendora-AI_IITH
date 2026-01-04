@@ -11,7 +11,7 @@ import { FluidBackground } from '@/components/ui/FluidBackground';
 import { InteractiveCharts } from '@/components/dashboard/InteractiveCharts';
 import { WalletConnection } from '@/components/dashboard/WalletConnection';
 import { AgentStatus } from '@/components/dashboard/AgentStatus';
-import { HydraStatus } from '@/components/dashboard/HydraStatus';
+import { L2NetworkStatus } from '@/components/dashboard/L2NetworkStatus';
 import { LoanRequestForm } from '@/components/dashboard/LoanRequestForm';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { Badge } from '@/components/ui/badge';
@@ -35,7 +35,7 @@ export default function Dashboard() {
         isConnected,
         agentStatus,
         currentConversation,
-        hydraStatus,
+        l2Status,
         workflowSteps
     } = useWebSocket();
 
@@ -74,7 +74,7 @@ export default function Dashboard() {
                         {[
                             { id: 'overview', icon: LayoutDashboard, label: 'Overview' },
                             { id: 'agents', icon: Bot, label: 'AI Agents' },
-                            { id: 'hydra', icon: Network, label: 'Hydra Network' },
+                            { id: 'l2network', icon: Network, label: 'Layer 2 Network' },
                             { id: 'requests', icon: Plus, label: 'Loan Requests' },
                             { id: 'settings', icon: Settings, label: 'Settings' },
                         ].map((item) => (
@@ -169,11 +169,11 @@ export default function Dashboard() {
 
                                     <Card className="glass-panel p-4">
                                         <div className="flex items-center gap-3">
-                                            <Network className={`w-5 h-5 ${hydraStatus.mode === 'hydra' ? 'text-green-500' : hydraStatus.mode === 'direct' ? 'text-blue-500' : 'text-red-500'}`} />
+                                            <Network className={`w-5 h-5 ${l2Status.mode === 'l2' ? 'text-green-500' : l2Status.mode === 'direct' ? 'text-blue-500' : 'text-red-500'}`} />
                                             <div>
-                                                <p className="text-sm font-medium">Hydra Network</p>
+                                                <p className="text-sm font-medium">Arbitrum L2</p>
                                                 <p className="text-xs text-muted-foreground capitalize">
-                                                    {hydraStatus.mode}
+                                                    {l2Status.mode === 'l2' ? 'Connected' : l2Status.mode}
                                                 </p>
                                             </div>
                                         </div>
@@ -206,11 +206,11 @@ export default function Dashboard() {
                                                     </div>
                                                     <div>
                                                         <h4 className="font-semibold text-foreground text-base">Loan Request #{1000 + i}</h4>
-                                                        <p className="text-sm text-muted-foreground mt-1">Negotiating via Hydra Head</p>
+                                                        <p className="text-sm text-muted-foreground mt-1">Negotiating via Arbitrum L2</p>
                                                     </div>
                                                 </div>
                                                 <div className="text-right">
-                                                    <p className="font-bold text-foreground text-base">5,000 ADA</p>
+                                                    <p className="font-bold text-foreground text-base">5,000 USDC</p>
                                                     <p className="text-sm text-green-500 mt-1">8.5% APR</p>
                                                 </div>
                                             </Card>
@@ -230,15 +230,15 @@ export default function Dashboard() {
                             />
                         )}
 
-                        {/* Hydra Network Tab */}
-                        {activeTab === 'hydra' && (
+                        {/* L2 Network Tab */}
+                        {activeTab === 'l2network' && (
                             <div className="space-y-6">
-                                <HydraStatus
-                                    mode={hydraStatus.mode}
-                                    connected={hydraStatus.connected}
-                                    headState={hydraStatus.head_state}
-                                    activeNegotiations={hydraStatus.active_negotiations}
-                                    currentHeadId={hydraStatus.current_head_id}
+                                <L2NetworkStatus
+                                    mode={l2Status.mode}
+                                    connected={l2Status.connected}
+                                    networkState={l2Status.network_state}
+                                    activeNegotiations={l2Status.active_negotiations}
+                                    currentSessionId={l2Status.current_session_id}
                                 />
 
                                 {/* Workflow Steps if active */}

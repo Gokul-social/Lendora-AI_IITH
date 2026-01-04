@@ -23,7 +23,7 @@ export function LoanRequestForm({ borrowerAddress, onWorkflowStart }: LoanReques
     const [interestRate, setInterestRate] = useState<number>(8.5);
     const [termMonths, setTermMonths] = useState<number>(12);
     const [creditScore, setCreditScore] = useState<number>(750);
-    const [lenderAddress, setLenderAddress] = useState<string>('addr1_lender_default');
+    const [lenderAddress, setLenderAddress] = useState<string>('');
     const [stablecoin, setStablecoin] = useState<string>('USDT');
     const [autoConfirm, setAutoConfirm] = useState<boolean>(false);
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -178,7 +178,7 @@ export function LoanRequestForm({ borrowerAddress, onWorkflowStart }: LoanReques
                         className="w-full px-4 py-2.5 rounded-lg bg-input border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors text-sm"
                         required
                     />
-                    <p className="text-xs text-muted-foreground">Your credit score remains private via Midnight ZK proofs (minimum: 700)</p>
+                    <p className="text-xs text-muted-foreground">Your credit score remains private via ZK proofs (minimum: 700)</p>
                 </div>
 
                 {/* Lender Address */}
@@ -188,11 +188,11 @@ export function LoanRequestForm({ borrowerAddress, onWorkflowStart }: LoanReques
                         type="text"
                         value={lenderAddress}
                         onChange={(e) => setLenderAddress(e.target.value)}
-                        placeholder="addr1_lender_..."
+                        placeholder="0x..."
                         className="w-full px-4 py-2.5 rounded-lg bg-input border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors font-mono text-sm"
                         required
                     />
-                    <p className="text-xs text-muted-foreground">Cardano address of the lender</p>
+                    <p className="text-xs text-muted-foreground">Ethereum address of the lender</p>
                 </div>
 
                 {/* Stablecoin Selection */}
@@ -248,8 +248,8 @@ export function LoanRequestForm({ borrowerAddress, onWorkflowStart }: LoanReques
                 </Button>
 
                 <p className="text-xs text-center text-muted-foreground">
-                    Your loan request will be processed through Midnight ZK credit check, 
-                    AI-powered negotiation via Hydra Heads, and Aiken smart contract settlement.
+                    Your loan request will be processed through ZK credit verification, 
+                    AI-powered negotiation via Arbitrum L2, and Ethereum smart contract settlement.
                 </p>
             </form>
         </Card>

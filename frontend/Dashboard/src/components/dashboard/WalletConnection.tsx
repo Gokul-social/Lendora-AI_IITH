@@ -1,6 +1,6 @@
 /**
  * Lendora AI - Enhanced Wallet Connection
- * Supports Nami and manual address input
+ * Supports MetaMask and manual address input
  */
 
 import { useState, useEffect } from 'react';
@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { useWallet } from '@/hooks/useWallet';
 import { Wallet, Copy, Check, Edit2, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import type { WalletName } from '@/lib/wallet/ethereum-wallet';
 
 interface WalletConnectionProps {
     onAddressChange?: (address: string) => void;
@@ -23,7 +24,6 @@ export function WalletConnection({ onAddressChange, defaultAddress }: WalletConn
         isConnecting,
         isConnected,
         error,
-        wallet,
         address,
         shortAddress,
         balance,
@@ -36,13 +36,23 @@ export function WalletConnection({ onAddressChange, defaultAddress }: WalletConn
     const [isManualMode, setIsManualMode] = useState(!defaultAddress);
     const [copied, setCopied] = useState(false);
 
-    const handleConnect = async (walletName: 'nami' | 'eternl' | 'yoroi' | 'flint' | 'typhon' | 'gerowallet' | 'lace') => {
+    const handleConnect = async (walletName: WalletName) => {
         try {
             await connect(walletName);
             setIsManualMode(false);
-            // Address will be synced via useEffect
         } catch (err) {
             console.error('Connection error:', err);
+            // Error is handled by the useWallet hook and displayed
+        }
+    };
+
+    const handleRetryConnection = async () => {
+        // Force a fresh connection attempt
+        if (installedWallets.length > 0) {
+            const metamaskWallet = installedWallets.find(w => w.name === 'metamask' && w.installed);
+            if (metamaskWallet) {
+                await handleConnect('metamask');
+            }
         }
     };
 
@@ -60,8 +70,12 @@ export function WalletConnection({ onAddressChange, defaultAddress }: WalletConn
         setTimeout(() => setCopied(false), 2000);
     };
 
+    const isValidAddress = (addr: string) => {
+        return addr && addr.startsWith('0x') && addr.length === 42;
+    };
+
     const currentAddress = isConnected ? address : manualAddress;
-    const currentShortAddress = isConnected ? shortAddress : (manualAddress ? `${manualAddress.slice(0, 8)}...${manualAddress.slice(-8)}` : '');
+    const currentShortAddress = isConnected ? shortAddress : (manualAddress ? `${manualAddress.slice(0, 6)}...${manualAddress.slice(-4)}` : '');
 
     // Sync address changes to parent component
     useEffect(() => {
@@ -69,6 +83,15 @@ export function WalletConnection({ onAddressChange, defaultAddress }: WalletConn
             onAddressChange(currentAddress);
         }
     }, [currentAddress, onAddressChange]);
+
+    // Wallet icons mapping
+    const walletIcons: Record<string, string> = {
+        metamask: '🦊',
+        coinbase: '🔵',
+        walletconnect: '🔗',
+        trust: '🛡️',
+        rainbow: '🌈',
+    };
 
     return (
         <Card className="glass-card p-4">
@@ -82,7 +105,7 @@ export function WalletConnection({ onAddressChange, defaultAddress }: WalletConn
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm text-foreground/80 font-medium">Connected Wallet</p>
-                            <p className="font-semibold text-foreground mt-0.5">{wallet?.name || 'Unknown'}</p>
+                            <p className="font-semibold text-foreground mt-0.5">MetaMask</p>
                         </div>
                         <Button
                             variant="outline"
@@ -98,12 +121,12 @@ export function WalletConnection({ onAddressChange, defaultAddress }: WalletConn
                             <Label className="text-xs text-foreground/80 font-medium">Address</Label>
                             <div className="flex items-center gap-2 mt-1">
                                 <Input
-                                    value={currentAddress && (currentAddress.startsWith('addr1') || currentAddress.startsWith('addr_test1')) 
+                                    value={isValidAddress(currentAddress) 
                                         ? currentShortAddress 
                                         : 'Invalid address format'}
                                     readOnly
                                     className={`font-mono text-sm bg-background/50 ${
-                                        currentAddress && (currentAddress.startsWith('addr1') || currentAddress.startsWith('addr_test1'))
+                                        isValidAddress(currentAddress)
                                             ? 'text-foreground'
                                             : 'text-red-500'
                                     }`}
@@ -112,7 +135,7 @@ export function WalletConnection({ onAddressChange, defaultAddress }: WalletConn
                                     variant="ghost"
                                     size="icon"
                                     onClick={copyAddress}
-                                    disabled={!currentAddress || (!currentAddress.startsWith('addr1') && !currentAddress.startsWith('addr_test1'))}
+                                    disabled={!isValidAddress(currentAddress)}
                                 >
                                     {copied ? (
                                         <Check className="w-4 h-4 text-green-500" />
@@ -121,7 +144,7 @@ export function WalletConnection({ onAddressChange, defaultAddress }: WalletConn
                                     )}
                                 </Button>
                             </div>
-                            {currentAddress && !currentAddress.startsWith('addr1') && !currentAddress.startsWith('addr_test1') && (
+                            {currentAddress && !isValidAddress(currentAddress) && (
                                 <p className="text-xs text-red-500 mt-1">
                                     Invalid address format. Please reconnect your wallet.
                                 </p>
@@ -131,7 +154,7 @@ export function WalletConnection({ onAddressChange, defaultAddress }: WalletConn
                         <div className="grid grid-cols-2 gap-2">
                             <div>
                                 <Label className="text-xs text-foreground/80 font-medium">Balance</Label>
-                                <p className="font-semibold text-foreground mt-0.5">{balance} ADA</p>
+                                <p className="font-semibold text-foreground mt-0.5">{balance} ETH</p>
                             </div>
                             <div>
                                 <Label className="text-xs text-foreground/80 font-medium">Network</Label>
@@ -151,14 +174,14 @@ export function WalletConnection({ onAddressChange, defaultAddress }: WalletConn
                                 .map((wallet) => (
                                     <Button
                                         key={wallet.name}
-                                        variant={wallet.name === 'eternl' ? 'default' : 'outline'}
+                                        variant={wallet.name === 'metamask' ? 'default' : 'outline'}
                                         onClick={() => handleConnect(wallet.name)}
                                         disabled={isConnecting}
-                                        className={`justify-start ${wallet.name === 'eternl' ? 'bg-primary text-primary-foreground' : ''}`}
+                                        className={`justify-start ${wallet.name === 'metamask' ? 'bg-primary text-primary-foreground' : ''}`}
                                     >
-                                        <Wallet className="w-4 h-4 mr-2" />
+                                        <span className="mr-2">{walletIcons[wallet.name] || '💳'}</span>
                                         {wallet.displayName}
-                                        {wallet.name === 'eternl' && (
+                                        {wallet.name === 'metamask' && (
                                             <span className="ml-auto text-xs opacity-75">Recommended</span>
                                         )}
                                     </Button>
@@ -166,7 +189,7 @@ export function WalletConnection({ onAddressChange, defaultAddress }: WalletConn
                         </div>
                         {installedWallets.filter(w => w.installed).length === 0 && (
                             <p className="text-xs text-muted-foreground mt-2">
-                                No wallets detected. Install Eternl or another Cardano wallet extension.
+                                No wallets detected. Install MetaMask or another Ethereum wallet extension.
                             </p>
                         )}
                     </div>
@@ -191,13 +214,13 @@ export function WalletConnection({ onAddressChange, defaultAddress }: WalletConn
                                     exit={{ opacity: 0, height: 0 }}
                                 >
                                     <Input
-                                        placeholder="addr1..."
+                                        placeholder="0x..."
                                         value={manualAddress}
                                         onChange={(e) => handleManualAddress(e.target.value)}
                                         className="font-mono text-sm"
                                     />
                                     <p className="text-xs text-muted-foreground mt-1">
-                                        Enter your Cardano address to use without wallet connection
+                                        Enter your Ethereum address to use without wallet connection
                                     </p>
                                 </motion.div>
                             )}
@@ -205,41 +228,61 @@ export function WalletConnection({ onAddressChange, defaultAddress }: WalletConn
                     </div>
 
                     {error && (
-                        <div className="p-2 rounded bg-red-500/10 border border-red-500/20">
-                            <p className="text-xs text-red-500 font-medium">Connection Error</p>
-                            <p className="text-xs text-red-500 mt-1">{error}</p>
+                        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                            <p className="text-sm text-red-500 font-medium mb-1">Connection Error</p>
+                            <p className="text-xs text-red-500 mb-3">{error}</p>
+                            {error.includes('pending') && (
+                                <div className="space-y-3">
+                                    <div className="text-xs text-red-400 space-y-1">
+                                        <p className="font-medium">Troubleshooting:</p>
+                                        <ol className="list-decimal list-inside space-y-1 ml-2">
+                                            <li>Check your MetaMask extension - look for a connection notification</li>
+                                            <li>Click on the MetaMask icon (🦊) in your browser toolbar</li>
+                                            <li>Approve the connection request if you see one</li>
+                                            <li>Make sure MetaMask is unlocked</li>
+                                        </ol>
+                                    </div>
+                                    <Button
+                                        onClick={handleRetryConnection}
+                                        variant="outline"
+                                        size="sm"
+                                        className="w-full text-xs"
+                                        disabled={isConnecting}
+                                    >
+                                        {isConnecting ? 'Connecting...' : 'Retry Connection'}
+                                    </Button>
+                                </div>
+                            )}
                         </div>
                     )}
 
-                    {/* Debug Info - Only show if Eternl is installed but having issues */}
-                    {installedWallets.some(w => w.name === 'eternl' && w.installed) && (
-                        <div className="p-2 rounded bg-blue-500/10 border border-blue-500/20">
-                            <p className="text-xs text-blue-500 font-medium">Debug Info</p>
-                            <p className="text-xs text-blue-500 mt-1">
-                                Eternl detected. If connection fails, try:
-                                <br />• Refreshing the page
-                                <br />• Unlocking Eternl
-                                <br />• Allowing site access in Eternl settings
-                            </p>
+                    {/* Helpful Tips - Only show if MetaMask is installed */}
+                    {installedWallets.some(w => w.name === 'metamask' && w.installed) && !error && (
+                        <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                            <p className="text-xs text-blue-500 font-medium mb-2">Quick Tips</p>
+                            <ul className="text-xs text-blue-400 space-y-1">
+                                <li>• Make sure MetaMask is unlocked</li>
+                                <li>• Click the MetaMask icon if you see a notification</li>
+                                <li>• Check browser popup blocker settings</li>
+                            </ul>
                         </div>
                     )}
                 </div>
             )}
 
-            {currentAddress && (currentAddress.startsWith('addr1') || currentAddress.startsWith('addr_test1')) && (
+            {currentAddress && isValidAddress(currentAddress) && (
                 <div className="mt-4 pt-4 border-t border-border">
                     <p className="text-xs text-foreground/80 font-medium mb-1">Active Address</p>
                     <p className="font-mono text-xs break-all text-foreground">{currentAddress}</p>
                 </div>
             )}
-            {currentAddress && !currentAddress.startsWith('addr1') && !currentAddress.startsWith('addr_test1') && (
+            {currentAddress && !isValidAddress(currentAddress) && (
                 <div className="mt-4 pt-4 border-t border-border">
                     <p className="text-xs text-red-500 font-medium mb-1">Invalid Address Format</p>
                     <p className="font-mono text-xs break-all text-red-500">{currentAddress}</p>
-                    <p className="text-xs text-red-500 mt-1">Address must start with addr1 (mainnet) or addr_test1 (testnet)</p>
+                    <p className="text-xs text-red-500 mt-1">Address must start with 0x and be 42 characters long</p>
                 </div>
             )}
         </Card>
     );
 }
-

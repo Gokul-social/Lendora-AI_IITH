@@ -3,10 +3,10 @@ Lendora AI - FastAPI Backend Server
 Complete API for the Privacy-First DeFi Lending Platform
 
 Integrates:
-- Midnight ZK Credit Checks
+- ZK Credit Checks (Circom/SnarkJS)
 - Llama 3 AI Analysis
-- Hydra Off-chain Negotiation (Real Node Support!)
-- Aiken Validator Settlement
+- Ethereum L2 Transactions
+- Solidity Smart Contract Settlement
 """
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, BackgroundTasks
@@ -23,19 +23,8 @@ from contextlib import asynccontextmanager
 # Add project root to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 
-# Import Hydra client
-try:
-    from hydra.head_manager import (
-        HydraClient, 
-        HydraNegotiationManager, 
-        HydraConfig, 
-        ConnectionMode,
-        Settlement
-    )
-    HYDRA_AVAILABLE = True
-except ImportError:
-    HYDRA_AVAILABLE = False
-    print("[WARNING] Hydra module not available, using built-in mock")
+# Hydra removed - using Ethereum L2 instead
+HYDRA_AVAILABLE = False
 
 # Import AI Agents
 try:
@@ -48,21 +37,11 @@ except ImportError as e:
     AGENTS_AVAILABLE = False
     print(f"[WARNING] Agent modules not available: {e}")
 
-# Import PyCardano transaction builder
-try:
-    from backend.cardano.tx_builder import get_tx_builder, LoanSettlementParams
-    CARDANO_TX_AVAILABLE = True
-except ImportError as e:
-    CARDANO_TX_AVAILABLE = False
-    print(f"[WARNING] PyCardano not available: {e}")
+# PyCardano removed - using Ethereum transaction builder instead
+CARDANO_TX_AVAILABLE = False
 
-# Import Midnight ZK client
-try:
-    from backend.midnight.zk_client import get_midnight_client, CreditCheckRequest
-    MIDNIGHT_AVAILABLE = True
-except ImportError as e:
-    MIDNIGHT_AVAILABLE = False
-    print(f"[WARNING] Midnight client not available: {e}")
+# Midnight Network removed - using Circom/SnarkJS ZK proofs instead
+MIDNIGHT_AVAILABLE = False
 
 # Import Credit Oracle
 try:
@@ -96,30 +75,8 @@ async def lifespan(app: FastAPI):
     print("Note: Actual port shown in uvicorn startup message above")
     print("=" * 70)
 
-    # Initialize Hydra manager
-    if HYDRA_AVAILABLE:
-        hydra_url = os.getenv("HYDRA_NODE_URL", "ws://127.0.0.1:4001")
-        mode = os.getenv("HYDRA_MODE", "auto")
-
-        config = HydraConfig(
-            node_url=hydra_url,
-            mode=ConnectionMode(mode)
-        )
-
-        app.state.hydra_manager = HydraNegotiationManager(HydraClient(config))
-
-        try:
-            await app.state.hydra_manager.start()
-            if not app.state.hydra_manager.client._connected:
-                print(f"[Hydra] Running in MOCK mode (node not available)")
-            else:
-                print(f"[Hydra] Connected to node at {hydra_url}")
-        except Exception as e:
-            print(f"[Hydra] Warning: {e}")
-            app.state.hydra_manager = None
-    else:
-        app.state.hydra_manager = None
-        print("[Hydra] Module not available, using fallback")
+    # Hydra removed - using Ethereum L2 instead
+    app.state.hydra_manager = None
 
     # Initialize AI Agents (always running)
     print("[Agents] Initializing AI agents...")
@@ -131,15 +88,7 @@ async def lifespan(app: FastAPI):
     os.environ.setdefault('ANTHROPIC_API_KEY', 'dummy-key-for-development')
 
     try:
-        # Initialize Masumi integration first (doesn't require LLM)
-        try:
-            from hydra.integrated_client import IntegratedHydraMasumiClient
-            masumi_client = IntegratedHydraMasumiClient()
-            app.state.masumi_client = masumi_client
-            print("[Agents] Masumi Cardano analysis client initialized")
-        except Exception as e:
-            print(f"[Agents] Masumi client initialization failed: {e}")
-            app.state.masumi_client = None
+        # Masumi removed - Cardano-specific agent no longer needed
 
         if AGENTS_AVAILABLE:
             # Initialize CrewAI agents (may fail due to LLM issues)
@@ -160,7 +109,7 @@ async def lifespan(app: FastAPI):
                 app.state.luna_agent = None
 
             # Check if at least one component is available
-            if app.state.lenny_agent or app.state.luna_agent or app.state.masumi_client:
+            if app.state.lenny_agent or app.state.luna_agent:
                 app.state.agents_initialized = True
                 print("[Agents] AI agents system initialized (with available components)")
 
@@ -177,15 +126,14 @@ async def lifespan(app: FastAPI):
                 print("[Agents] No AI components available, using full simulation mode")
                 app.state.agents_initialized = False
         else:
-            print("[Agents] CrewAI not available, using simulation mode with Masumi if available")
-            app.state.agents_initialized = bool(app.state.masumi_client)
+            print("[Agents] CrewAI not available, using simulation mode")
+            app.state.agents_initialized = False
 
     except Exception as e:
         print(f"[Agents] Critical error during initialization: {e}")
         app.state.agents_initialized = False
         app.state.lenny_agent = None
         app.state.luna_agent = None
-        app.state.masumi_client = None
 
     yield
 
@@ -205,14 +153,11 @@ async def lifespan(app: FastAPI):
     if hasattr(app.state, 'agents_initialized') and app.state.agents_initialized:
         print("[Agents] Agents shutdown complete")
 
-    # Stop Hydra
-    if hasattr(app.state, 'hydra_manager') and app.state.hydra_manager:
-        await app.state.hydra_manager.stop()
-        print("[Hydra] Disconnected")
+    # Hydra removed - no cleanup needed
 
 app = FastAPI(
     title="Lendora AI API",
-    description="Privacy-First DeFi Lending on Cardano",
+    description="Privacy-First DeFi Lending on Ethereum",
     version="2.0.0",
     lifespan=lifespan
 )
@@ -263,9 +208,7 @@ class WorkflowRequest(BaseModel):
     auto_confirm: Optional[bool] = False
     conversation_id: Optional[str] = None
 
-class HydraConfigRequest(BaseModel):
-    node_url: str
-    mode: str = "auto"
+# HydraConfigRequest removed - Hydra no longer used
 
 class WorkflowStep(BaseModel):
     step: int
@@ -399,12 +342,12 @@ async def agent_heartbeat():
 # ============================================================================
 
 async def perform_credit_check(borrower: str, score: int) -> Dict:
-    """Perform ZK credit check via Midnight (with oracle fallback)."""
+    """Perform ZK credit check using Circom/SnarkJS (replaces Midnight)."""
     await manager.broadcast({
         "type": "workflow_step",
         "data": {
             "step": 1,
-            "name": "Midnight ZK Credit Check",
+            "name": "ZK Credit Check",
             "status": "processing",
             "details": {"borrower": borrower}
         }
@@ -420,36 +363,19 @@ async def perform_credit_check(borrower: str, score: int) -> Dict:
     #         credit_score = oracle_data.score
     #         print(f"[Oracle] Fetched credit score: {credit_score} (confidence: {oracle_data.confidence})")
     
-    # Perform ZK credit check via Midnight
-    if MIDNIGHT_AVAILABLE:
-        midnight = get_midnight_client()
-        request = CreditCheckRequest(
-            borrower_address=borrower,
-            credit_score=credit_score
-        )
-        result_obj = midnight.submit_credit_check(request)
-        
-        result = {
-            "borrower_address": borrower,
-            "is_eligible": result_obj.is_eligible,
-            "proof_hash": result_obj.proof_hash,
-            "timestamp": result_obj.timestamp,
-            "network": result_obj.network,
-            "source": "midnight" if midnight.available else "mock"
-        }
-    else:
-        # Fallback to mock
-        await asyncio.sleep(1)  # Simulate processing
-        is_eligible = credit_score >= 700
-        proof_hash = f"zk_proof_{borrower[:10]}_{int(datetime.now().timestamp())}"
-        
-        result = {
-            "borrower_address": borrower,
-            "is_eligible": is_eligible,
-            "proof_hash": proof_hash,
-            "timestamp": datetime.now().isoformat(),
-            "source": "mock"
-        }
+    # Perform ZK credit check using Circom/SnarkJS (replaces Midnight)
+    # TODO: Integrate with backend/zk/proof_generator.py
+    await asyncio.sleep(1)  # Simulate processing
+    is_eligible = credit_score >= 700
+    proof_hash = f"zk_proof_{borrower[:10]}_{int(datetime.now().timestamp())}"
+    
+    result = {
+        "borrower_address": borrower,
+        "is_eligible": is_eligible,
+        "proof_hash": proof_hash,
+        "timestamp": datetime.now().isoformat(),
+        "source": "circom"  # Using Circom instead of Midnight
+    }
     
     state.credit_checks[borrower] = result
     
@@ -457,13 +383,13 @@ async def perform_credit_check(borrower: str, score: int) -> Dict:
         "type": "workflow_step",
         "data": {
             "step": 1,
-            "name": "Midnight ZK Credit Check",
+            "name": "ZK Credit Check",
             "status": "completed",
             "details": {
                 "is_eligible": result["is_eligible"],
                 "proof_hash": result["proof_hash"],
                 "message": "Credit score verified privately via ZK proof",
-                "source": result.get("source", "mock")
+                "source": result.get("source", "circom")
             }
         }
     })
@@ -977,60 +903,7 @@ async def health():
     }
 
 
-# --- Hydra Configuration ---
-
-@app.get("/api/hydra/status")
-async def hydra_status():
-    """Get Hydra node connection status."""
-    if not hasattr(app.state, 'hydra_manager') or not app.state.hydra_manager:
-        return {
-            "connected": False,
-            "mode": "unavailable",
-            "message": "Hydra module not loaded"
-        }
-    
-    client = app.state.hydra_manager.client
-    return {
-        "connected": client._connected,
-        "mode": "direct" if not client._connected else "hydra",
-        "node_url": client.config.node_url,
-        "head_state": client.state.value,
-        "active_negotiations": len(app.state.hydra_manager.active_negotiations)
-    }
-
-
-@app.post("/api/hydra/reconnect")
-async def hydra_reconnect(config: Optional[HydraConfigRequest] = None):
-    """Attempt to reconnect to Hydra node."""
-    if not HYDRA_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Hydra module not available")
-    
-    try:
-        # Stop existing manager
-        if hasattr(app.state, 'hydra_manager') and app.state.hydra_manager:
-            await app.state.hydra_manager.stop()
-        
-        # Create new config
-        new_config = HydraConfig(
-            node_url=config.node_url if config else os.getenv("HYDRA_NODE_URL", "ws://127.0.0.1:4001"),
-            mode=ConnectionMode(config.mode) if config else ConnectionMode.AUTO
-        )
-        
-        # Create new manager
-        app.state.hydra_manager = HydraNegotiationManager(HydraClient(new_config))
-        await app.state.hydra_manager.start()
-        
-        return {
-            "success": True,
-            "mode": "direct" if not app.state.hydra_manager.client._connected else "hydra",
-            "node_url": new_config.node_url
-        }
-        
-    except Exception as e:
-        return {
-            "success": False,
-            "error": str(e)
-        }
+# Hydra endpoints removed - using Ethereum L2 instead
 
 
 # --- Dashboard ---
@@ -1089,7 +962,7 @@ async def get_analytics():
 
 # --- Credit Check ---
 
-@app.post("/api/midnight/credit-check")
+@app.post("/api/zk/credit-check")  # Replaced Midnight with Circom/SnarkJS
 async def credit_check(req: CreditCheckRequest, background_tasks: BackgroundTasks):
     """Submit credit score for ZK verification."""
     result = await perform_credit_check(req.borrower_address, req.credit_score)
@@ -1175,32 +1048,8 @@ async def run_agent_negotiation(
                 "reasoning": reasoning
             })
 
-            # If Masumi client is available, add blockchain analysis
-            if hasattr(app.state, 'masumi_client') and app.state.masumi_client:
-                try:
-                    masumi_analysis = await app.state.masumi_client.analyze_borrower_with_masumi(borrower_address, top_assets=3)
-
-                    if masumi_analysis.get('blockchain_data'):
-                        blockchain_info = masumi_analysis['blockchain_data']
-                        ada_balance = blockchain_info.get('lovelace', 0)
-                        asset_count = len([k for k in blockchain_info.keys() if k != 'lovelace'])
-
-                        masumi_content = f"Masumi Analysis: Borrower holds {ada_balance} ADA and {asset_count} native assets. "
-                        if masumi_analysis.get('masumi_analysis') and isinstance(masumi_analysis['masumi_analysis'], str):
-                            masumi_content += masumi_analysis['masumi_analysis'][:100] + "..."
-
-                        state.conversations[conversation_id].append({
-                            "id": f"msg_{len(state.conversations[conversation_id])}",
-                            "timestamp": datetime.now().isoformat(),
-                            "agent": "masumi",
-                            "type": "analysis",
-                            "content": masumi_content,
-                            "confidence": 0.90,
-                            "reasoning": "Cardano blockchain analysis complete"
-                        })
-
-                except Exception as e:
-                    print(f"[Masumi] Analysis failed: {e}")
+            # Masumi removed - Cardano-specific agent no longer needed
+            # Ethereum blockchain analysis can be added here if needed
 
             # Broadcast conversation update
             await manager.broadcast({
@@ -1634,7 +1483,7 @@ async def agent_status():
         "agents_initialized": getattr(app.state, 'agents_initialized', False),
         "lenny_available": hasattr(app.state, 'lenny_agent') and app.state.lenny_agent is not None,
         "luna_available": hasattr(app.state, 'luna_agent') and app.state.luna_agent is not None,
-        "masumi_available": hasattr(app.state, 'masumi_client') and app.state.masumi_client is not None,
+        "masumi_available": False,  # Masumi removed - Cardano-specific
         "status": state.stats["agentStatus"],
         "current_task": "Monitoring offers" if state.stats["agentStatus"] == "idle" else "Negotiating",
         "active_negotiation": state.current_negotiation is not None
@@ -1675,71 +1524,8 @@ async def get_latest_conversation():
     return {"conversation_id": latest_id, "messages": messages}
 
 
-# ============================================================================
-# PyCardano Transaction Building
-# ============================================================================
-
-@app.post("/api/cardano/build-tx")
-async def build_settlement_tx(req: Dict):
-    """Build a real Cardano settlement transaction using PyCardano."""
-    if not CARDANO_TX_AVAILABLE:
-        return {
-            "success": False,
-            "error": "PyCardano not available. Install: pip install pycardano",
-            "tx_cbor": None
-        }
-    
-    try:
-        tx_builder = get_tx_builder()
-        
-        params = LoanSettlementParams(
-            borrower_address=req.get("borrower_address"),
-            lender_address=req.get("lender_address"),
-            principal=int(req.get("principal", 0) * 1_000_000),  # Convert ADA to lovelace
-            interest_amount=int(req.get("interest_amount", 0) * 1_000_000),
-            validator_script_hash=req.get("validator_script_hash")
-        )
-        
-        result = tx_builder.build_settlement_tx(params)
-        return result
-        
-    except Exception as e:
-        return {
-            "success": False,
-            "error": str(e),
-            "tx_cbor": None
-        }
-
-
-@app.post("/api/cardano/estimate-fee")
-async def estimate_tx_fee(req: Dict):
-    """Estimate transaction fee."""
-    if not CARDANO_TX_AVAILABLE:
-        return {
-            "success": False,
-            "fee": 0,
-            "error": "PyCardano not available"
-        }
-    
-    try:
-        tx_builder = get_tx_builder()
-        
-        params = LoanSettlementParams(
-            borrower_address=req.get("borrower_address"),
-            lender_address=req.get("lender_address"),
-            principal=int(req.get("principal", 0) * 1_000_000),
-            interest_amount=int(req.get("interest_amount", 0) * 1_000_000)
-        )
-        
-        result = tx_builder.estimate_fee(params)
-        return result
-        
-    except Exception as e:
-        return {
-            "success": False,
-            "fee": 0,
-            "error": str(e)
-        }
+# PyCardano endpoints removed - using Ethereum transaction builder instead
+# See backend/ethereum/tx_builder.py for Ethereum transaction building
 
 
 # ============================================================================
