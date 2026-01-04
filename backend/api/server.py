@@ -945,11 +945,45 @@ async def start_workflow(req: WorkflowRequest):
     })
     
     # Step 5: Negotiate (uses real client if available)
+    # Add negotiation message
+    state.conversations[conversation_id].append({
+        "id": f"msg_{len(state.conversations[conversation_id])}",
+        "timestamp": datetime.now().isoformat(),
+        "agent": "lenny",
+        "type": "message",
+        "content": f"Counter-offer: {target}% interest rate. This is more aligned with current market conditions."
+    })
+    
     result = await negotiate_in_hydra_real(target)
     
-    # If counter, negotiate once more
-    if result.get("action") == "counter":
+    # Add response message
+    if result.get("action") == "accepted":
+        state.conversations[conversation_id].append({
+            "id": f"msg_{len(state.conversations[conversation_id])}",
+            "timestamp": datetime.now().isoformat(),
+            "agent": "luna",
+            "type": "message",
+            "content": f"Accepted! Final rate: {result.get('rate', target)}%"
+        })
+    elif result.get("action") == "counter":
+        state.conversations[conversation_id].append({
+            "id": f"msg_{len(state.conversations[conversation_id])}",
+            "timestamp": datetime.now().isoformat(),
+            "agent": "luna",
+            "type": "message",
+            "content": f"Counter-offer: {result.get('rate', target)}% - meeting in the middle."
+        })
+        # If counter, negotiate once more
         new_target = round((target + result["rate"]) / 2, 1)
+        state.conversations[conversation_id].append({
+            "id": f"msg_{len(state.conversations[conversation_id])}",
+            "timestamp": datetime.now().isoformat(),
+            "agent": "lenny",
+            "type": "thought",
+            "content": f"{new_target}% is acceptable. Accepting terms.",
+            "confidence": 0.92,
+            "reasoning": "Rate is at market average, savings achieved"
+        })
         result = await negotiate_in_hydra_real(new_target)
     
     # Step 6: Accept and Settle (uses real client if available)
