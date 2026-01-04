@@ -12,6 +12,7 @@ import { InteractiveCharts } from '@/components/dashboard/InteractiveCharts';
 import { WalletConnection } from '@/components/dashboard/WalletConnection';
 import { AgentStatus } from '@/components/dashboard/AgentStatus';
 import { HydraStatus } from '@/components/dashboard/HydraStatus';
+import { LoanRequestForm } from '@/components/dashboard/LoanRequestForm';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -27,6 +28,7 @@ import {
 
 export default function Dashboard() {
     const [activeTab, setActiveTab] = useState('overview');
+    const [walletAddress, setWalletAddress] = useState<string>('');
 
     // WebSocket connection for real-time updates
     const {
@@ -57,13 +59,13 @@ export default function Dashboard() {
                 <motion.aside
                     initial={{ x: -100, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
-                    className="w-64 glass-panel border-r border-white/10 hidden md:flex flex-col p-6 fixed h-full z-10"
+                    className="w-64 glass-panel border-r border-border hidden md:flex flex-col p-6 fixed h-full z-10"
                 >
                     <div className="flex items-center gap-3 mb-10">
-                        <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
-                            <div className="w-6 h-6 bg-primary rounded-lg" />
+                        <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center border border-primary/30">
+                            <div className="w-6 h-6 bg-primary rounded" />
                         </div>
-                        <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-white/60">
+                        <h1 className="text-xl font-bold text-foreground">
                             Lendora AI
                         </h1>
                     </div>
@@ -79,8 +81,11 @@ export default function Dashboard() {
                             <Button
                                 key={item.id}
                                 variant={activeTab === item.id ? "secondary" : "ghost"}
-                                className={`w-full justify-start gap-3 ${activeTab === item.id ? 'bg-white/10' : 'hover:bg-white/5'
-                                    }`}
+                                className={`w-full justify-start gap-3 text-sm font-medium ${
+                                    activeTab === item.id 
+                                        ? 'bg-secondary text-secondary-foreground border border-border' 
+                                        : 'hover:bg-secondary/50 text-muted-foreground hover:text-foreground'
+                                }`}
                                 onClick={() => setActiveTab(item.id)}
                             >
                                 <item.icon className="w-5 h-5" />
@@ -100,8 +105,8 @@ export default function Dashboard() {
                     {/* Header */}
                     <header className="flex justify-between items-center mb-8">
                         <div>
-                            <h2 className="text-3xl font-bold mb-2">Dashboard</h2>
-                            <p className="text-muted-foreground">Welcome back, Borrower</p>
+                            <h2 className="text-3xl font-bold mb-2 text-foreground">Dashboard</h2>
+                            <p className="text-muted-foreground text-base">Welcome back, Borrower</p>
                         </div>
 
                         <div className="flex items-center gap-4">
@@ -110,7 +115,7 @@ export default function Dashboard() {
                                 <input
                                     type="text"
                                     placeholder="Search loans..."
-                                    className="pl-10 pr-4 py-2 rounded-full bg-white/5 border border-white/10 focus:outline-none focus:border-primary/50 transition-colors w-64"
+                                    className="pl-10 pr-4 py-2 rounded-lg bg-input border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors w-64 text-sm"
                                 />
                             </div>
 
@@ -120,8 +125,8 @@ export default function Dashboard() {
                             </Button>
 
                             <WalletConnection
-                                defaultAddress="addr1..."
-                                onAddressChange={() => { }}
+                                defaultAddress={walletAddress}
+                                onAddressChange={(address) => setWalletAddress(address)}
                             />
                         </div>
                     </header>
@@ -178,7 +183,7 @@ export default function Dashboard() {
                                 {/* Analytics Section */}
                                 <section>
                                     <div className="flex justify-between items-center mb-6">
-                                        <h3 className="text-xl font-semibold">Market Overview</h3>
+                                        <h3 className="text-xl font-semibold text-foreground">Market Overview</h3>
                                         <div className="flex gap-2">
                                             <Button size="sm" variant="outline" className="rounded-full">1W</Button>
                                             <Button size="sm" variant="outline" className="rounded-full bg-primary text-primary-foreground border-none">1M</Button>
@@ -191,22 +196,22 @@ export default function Dashboard() {
 
                                 {/* Recent Activity */}
                                 <section>
-                                    <h3 className="text-xl font-semibold mb-6">Recent Activity</h3>
+                                    <h3 className="text-xl font-semibold mb-6 text-foreground">Recent Activity</h3>
                                     <div className="grid gap-4">
                                         {[1, 2, 3].map((i) => (
-                                            <Card key={i} className="glass-panel p-4 flex items-center justify-between hover-lift">
+                                            <Card key={i} className="glass-panel p-5 flex items-center justify-between hover-lift border border-border">
                                                 <div className="flex items-center gap-4">
-                                                    <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                                                    <div className="w-10 h-10 rounded-full bg-green-500/20 border border-green-500/30 flex items-center justify-center">
                                                         <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
                                                     </div>
                                                     <div>
-                                                        <h4 className="font-medium">Loan Request #{1000 + i}</h4>
-                                                        <p className="text-sm text-muted-foreground">Negotiating via Hydra Head</p>
+                                                        <h4 className="font-semibold text-foreground text-base">Loan Request #{1000 + i}</h4>
+                                                        <p className="text-sm text-muted-foreground mt-1">Negotiating via Hydra Head</p>
                                                     </div>
                                                 </div>
                                                 <div className="text-right">
-                                                    <p className="font-bold">5,000 ADA</p>
-                                                    <p className="text-sm text-green-500">8.5% APR</p>
+                                                    <p className="font-bold text-foreground text-base">5,000 ADA</p>
+                                                    <p className="text-sm text-green-500 mt-1">8.5% APR</p>
                                                 </div>
                                             </Card>
                                         ))}
@@ -267,9 +272,28 @@ export default function Dashboard() {
                         {activeTab === 'requests' && (
                             <section>
                                 <h3 className="text-xl font-semibold mb-6">Loan Requests</h3>
-                                <Card className="glass-panel p-6">
-                                    <p className="text-muted-foreground">Loan request functionality coming soon...</p>
-                                </Card>
+                                {walletAddress ? (
+                                    <LoanRequestForm
+                                        borrowerAddress={walletAddress}
+                                        onWorkflowStart={(workflowId) => {
+                                            console.log('Workflow started:', workflowId);
+                                            // Optionally switch to agents tab to see the negotiation
+                                            setActiveTab('agents');
+                                        }}
+                                    />
+                                ) : (
+                                    <Card className="glass-panel p-6">
+                                        <div className="text-center py-8">
+                                            <p className="text-muted-foreground mb-4">
+                                                Please connect your wallet to create a loan request
+                                            </p>
+                                            <WalletConnection
+                                                defaultAddress=""
+                                                onAddressChange={(address) => setWalletAddress(address)}
+                                            />
+                                        </div>
+                                    </Card>
+                                )}
                             </section>
                         )}
 

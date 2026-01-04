@@ -54,9 +54,9 @@ export function HydraStatus({ mode, connected, headState, activeNegotiations, cu
   };
 
   return (
-    <Card className="glass-panel p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold flex items-center gap-2">
+    <Card className="glass-panel p-6 border border-border">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-lg font-semibold flex items-center gap-2 text-foreground">
           <Zap className="w-5 h-5 text-primary" />
           Hydra Network Status
         </h3>
@@ -79,7 +79,7 @@ export function HydraStatus({ mode, connected, headState, activeNegotiations, cu
       <div className="grid grid-cols-2 gap-4">
         {/* Head State */}
         <div className="space-y-2">
-          <p className="text-sm text-muted-foreground">Head State</p>
+          <p className="text-sm font-medium text-muted-foreground">Head State</p>
           <div className="flex items-center gap-2">
             <Badge variant="outline" className={`${getHeadStateColor(headState)} text-white border-0`}>
               {headState || 'Unknown'}
@@ -89,9 +89,9 @@ export function HydraStatus({ mode, connected, headState, activeNegotiations, cu
 
         {/* Active Negotiations */}
         <div className="space-y-2">
-          <p className="text-sm text-muted-foreground">Active Negotiations</p>
+          <p className="text-sm font-medium text-muted-foreground">Active Negotiations</p>
           <div className="flex items-center gap-2">
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-foreground">
               {activeNegotiations || 0}
             </div>
             <span className="text-sm text-muted-foreground">heads</span>
@@ -100,7 +100,7 @@ export function HydraStatus({ mode, connected, headState, activeNegotiations, cu
       </div>
 
       {/* Mode Description */}
-      <div className="mt-4 p-3 rounded-lg bg-white/5">
+      <div className="mt-4 p-4 rounded-lg bg-secondary/30 border border-border">
         <div className="flex items-start gap-3">
           {mode === 'real' ? (
             <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
@@ -111,7 +111,7 @@ export function HydraStatus({ mode, connected, headState, activeNegotiations, cu
           )}
 
           <div>
-            <p className="text-sm font-medium mb-1">
+            <p className="text-sm font-semibold mb-1 text-foreground">
               {mode === 'real'
                 ? 'Connected to Hydra Node'
                 : mode === 'mock'
@@ -119,7 +119,7 @@ export function HydraStatus({ mode, connected, headState, activeNegotiations, cu
                 : 'Hydra Unavailable'
               }
             </p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground leading-relaxed">
               {mode === 'real'
                 ? 'Real-time Layer 2 negotiations with zero gas fees'
                 : mode === 'mock'
@@ -136,20 +136,20 @@ export function HydraStatus({ mode, connected, headState, activeNegotiations, cu
         <motion.div
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: 'auto' }}
-          className="mt-4 p-3 rounded-lg bg-primary/10 border border-primary/20"
+          className="mt-4 p-4 rounded-lg bg-primary/10 border border-primary/30"
         >
-          <p className="text-sm font-medium text-primary mb-2">
+          <p className="text-sm font-semibold text-primary mb-3">
             Active Hydra Heads
           </p>
           <div className="space-y-2">
             {/* Display current head if available */}
             {currentHeadId && (
-              <div className="flex items-center justify-between text-xs p-2 rounded bg-white/5">
+              <div className="flex items-center justify-between text-sm p-3 rounded bg-secondary/30 border border-border">
                 <div className="flex flex-col">
-                  <span className="font-mono font-medium">{currentHeadId}</span>
-                  <span className="text-muted-foreground">Current negotiation head</span>
+                  <span className="font-mono font-semibold text-foreground text-xs">{currentHeadId}</span>
+                  <span className="text-muted-foreground text-xs mt-1">Current negotiation head</span>
                 </div>
-                <Badge variant="outline" className="bg-green-500/20 text-green-600 border-green-500/30">
+                <Badge variant="outline" className="bg-green-500/20 text-green-400 border-green-500/40">
                   <CheckCircle2 className="w-3 h-3 mr-1" />
                   {headState || 'Open'}
                 </Badge>
@@ -160,12 +160,12 @@ export function HydraStatus({ mode, connected, headState, activeNegotiations, cu
             {activeNegotiations && activeNegotiations > (currentHeadId ? 1 : 0) && (
               <>
                 {Array.from({ length: Math.min(activeNegotiations - (currentHeadId ? 1 : 0), 4) }, (_, i) => (
-                  <div key={i + (currentHeadId ? 1 : 0)} className="flex items-center justify-between text-xs p-2 rounded bg-white/5">
+                  <div key={i + (currentHeadId ? 1 : 0)} className="flex items-center justify-between text-sm p-3 rounded bg-secondary/30 border border-border">
                     <div className="flex flex-col">
-                      <span className="font-mono font-medium">head_{String(i + 1).padStart(3, '0')}</span>
-                      <span className="text-muted-foreground">Zero-gas negotiation active</span>
+                      <span className="font-mono font-semibold text-foreground text-xs">head_{String(i + 1).padStart(3, '0')}</span>
+                      <span className="text-muted-foreground text-xs mt-1">Zero-gas negotiation active</span>
                     </div>
-                    <Badge variant="outline" className="bg-green-500/20 text-green-600 border-green-500/30">
+                    <Badge variant="outline" className="bg-green-500/20 text-green-400 border-green-500/40">
                       <CheckCircle2 className="w-3 h-3 mr-1" />
                       Open
                     </Badge>
@@ -176,7 +176,7 @@ export function HydraStatus({ mode, connected, headState, activeNegotiations, cu
 
             {/* Show count if no specific heads */}
             {!currentHeadId && activeNegotiations && activeNegotiations > 0 && (
-              <div className="text-xs text-muted-foreground text-center py-2">
+              <div className="text-sm text-muted-foreground text-center py-2">
                 {activeNegotiations} active negotiation{activeNegotiations !== 1 ? 's' : ''}
               </div>
             )}

@@ -46,16 +46,16 @@ interface CustomTooltipProps extends TooltipProps<ValueType, NameType> {
 const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
     if (active && payload && payload.length) {
         return (
-            <Card className="glass-card p-3 border-primary/20">
+            <Card className="glass-card p-3 border-border bg-card">
                 <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground">{payload[0].payload.name}</p>
+                    <p className="text-xs font-semibold text-muted-foreground">{payload[0].payload.name}</p>
                     {payload.map((entry, index: number) => (
                         <div key={index} className="flex items-center gap-2">
                             <div
                                 className="w-2 h-2 rounded-full"
                                 style={{ backgroundColor: entry.color }}
                             />
-                            <span className="text-sm font-medium">
+                            <span className="text-sm font-medium text-foreground">
                                 {entry.name}: {Number(entry.value).toFixed(2)}
                                 {entry.dataKey === 'rate' && '%'}
                                 {(entry.dataKey === 'principal' || entry.dataKey === 'profit') && ' ADA'}
@@ -100,21 +100,21 @@ export function InteractiveCharts({ trades = [] }: InteractiveChartsProps) {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}
                 >
-                    <Card className="glass-card p-6 border-green-500/20 hover:border-green-500/40 transition-colors">
+                    <Card className="glass-card p-6 border-border hover:border-green-500/40 transition-colors">
                         <div className="flex items-start justify-between">
                             <div>
-                                <p className="text-sm text-muted-foreground mb-1">Total Profit</p>
-                                <h3 className="text-2xl font-bold text-green-500">
+                                <p className="text-sm font-medium text-muted-foreground mb-1">Total Profit</p>
+                                <h3 className="text-2xl font-bold text-green-400">
                                     {totalProfit.toFixed(2)} ADA
                                 </h3>
                             </div>
-                            <div className="p-3 rounded-xl bg-green-500/10">
-                                <DollarSign className="w-5 h-5 text-green-500" />
+                            <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                                <DollarSign className="w-5 h-5 text-green-400" />
                             </div>
                         </div>
                         <div className="mt-4 flex items-center text-xs">
-                            <TrendingUp className="w-3 h-3 text-green-500 mr-1" />
-                            <span className="text-green-500">+12.5%</span>
+                            <TrendingUp className="w-3 h-3 text-green-400 mr-1" />
+                            <span className="text-green-400 font-medium">+12.5%</span>
                             <span className="text-muted-foreground ml-1">vs last week</span>
                         </div>
                     </Card>
@@ -125,28 +125,28 @@ export function InteractiveCharts({ trades = [] }: InteractiveChartsProps) {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
                 >
-                    <Card className="glass-card p-6 border-blue-500/20 hover:border-blue-500/40 transition-colors">
+                    <Card className="glass-card p-6 border-border hover:border-blue-500/40 transition-colors">
                         <div className="flex items-start justify-between">
                             <div>
-                                <p className="text-sm text-muted-foreground mb-1">Avg Interest Rate</p>
-                                <h3 className="text-2xl font-bold text-blue-500">
+                                <p className="text-sm font-medium text-muted-foreground mb-1">Avg Interest Rate</p>
+                                <h3 className="text-2xl font-bold text-blue-400">
                                     {avgRate.toFixed(2)}%
                                 </h3>
                             </div>
-                            <div className="p-3 rounded-xl bg-blue-500/10">
-                                <Activity className="w-5 h-5 text-blue-500" />
+                            <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                                <Activity className="w-5 h-5 text-blue-400" />
                             </div>
                         </div>
                         <div className="mt-4 flex items-center text-xs">
                             {rateChange < 0 ? (
                                 <>
-                                    <TrendingDown className="w-3 h-3 text-green-500 mr-1" />
-                                    <span className="text-green-500">{rateChange.toFixed(2)}%</span>
+                                    <TrendingDown className="w-3 h-3 text-green-400 mr-1" />
+                                    <span className="text-green-400 font-medium">{rateChange.toFixed(2)}%</span>
                                 </>
                             ) : (
                                 <>
-                                    <TrendingUp className="w-3 h-3 text-red-500 mr-1" />
-                                    <span className="text-red-500">+{rateChange.toFixed(2)}%</span>
+                                    <TrendingUp className="w-3 h-3 text-red-400 mr-1" />
+                                    <span className="text-red-400 font-medium">+{rateChange.toFixed(2)}%</span>
                                 </>
                             )}
                             <span className="text-muted-foreground ml-1">vs last trade</span>
@@ -159,16 +159,16 @@ export function InteractiveCharts({ trades = [] }: InteractiveChartsProps) {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 }}
                 >
-                    <Card className="glass-card p-6 border-purple-500/20 hover:border-purple-500/40 transition-colors">
+                    <Card className="glass-card p-6 border-border hover:border-purple-500/40 transition-colors">
                         <div className="flex items-start justify-between">
                             <div>
-                                <p className="text-sm text-muted-foreground mb-1">Active Loans</p>
-                                <h3 className="text-2xl font-bold text-purple-500">
+                                <p className="text-sm font-medium text-muted-foreground mb-1">Active Loans</p>
+                                <h3 className="text-2xl font-bold text-purple-400">
                                     {trades.length}
                                 </h3>
                             </div>
-                            <div className="p-3 rounded-xl bg-purple-500/10">
-                                <TrendingUp className="w-5 h-5 text-purple-500" />
+                            <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                                <TrendingUp className="w-5 h-5 text-purple-400" />
                             </div>
                         </div>
                         <div className="mt-4 flex items-center text-xs">
@@ -186,8 +186,8 @@ export function InteractiveCharts({ trades = [] }: InteractiveChartsProps) {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.4 }}
                 >
-                    <Card className="glass-card p-6">
-                        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <Card className="glass-card p-6 border border-border">
+                        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-foreground">
                             <DollarSign className="w-5 h-5 text-primary" />
                             Loan Volume
                         </h3>
@@ -231,8 +231,8 @@ export function InteractiveCharts({ trades = [] }: InteractiveChartsProps) {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.5 }}
                 >
-                    <Card className="glass-card p-6">
-                        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <Card className="glass-card p-6 border border-border">
+                        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-foreground">
                             <Activity className="w-5 h-5 text-primary" />
                             Interest Rate Trend
                         </h3>

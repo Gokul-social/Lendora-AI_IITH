@@ -40,9 +40,9 @@ export function WalletConnection({ onAddressChange, defaultAddress = '' }: Walle
     if (address) {
         return (
             <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500/10 text-green-600 border border-green-500/20">
+                <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-green-500/10 text-green-400 border border-green-500/30">
                     <CheckCircle2 className="w-4 h-4" />
-                    <span className="font-mono text-sm">
+                    <span className="font-mono text-sm font-medium">
                         {address.slice(0, 8)}...{address.slice(-8)}
                     </span>
                 </div>
@@ -50,7 +50,7 @@ export function WalletConnection({ onAddressChange, defaultAddress = '' }: Walle
                     variant="outline"
                     size="sm"
                     onClick={disconnectWallet}
-                    className="hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
+                    className="hover:bg-destructive/10 hover:text-destructive hover:border-destructive/40"
                 >
                     Disconnect
                 </Button>
@@ -61,9 +61,9 @@ export function WalletConnection({ onAddressChange, defaultAddress = '' }: Walle
     return (
         <div className="space-y-4">
             {error && (
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-red-500/10 text-red-600 border border-red-500/20">
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-red-500/10 text-red-400 border border-red-500/30">
                     <AlertCircle className="w-4 h-4" />
-                    <span className="text-sm">{error}</span>
+                    <span className="text-sm font-medium">{error}</span>
                 </div>
             )}
 
