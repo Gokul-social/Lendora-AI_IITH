@@ -923,240 +923,240 @@ async def start_workflow(req: WorkflowRequest, background_tasks: BackgroundTasks
         state.conversations[conversation_id] = []
     
     try:
-    
-    # Add initial message
-    state.conversations[conversation_id].append({
-        "id": f"msg_{len(state.conversations[conversation_id])}",
-        "timestamp": datetime.now().isoformat(),
-        "agent": "system",
-        "type": "message",
-        "content": f"Loan workflow started. Role: {req.role}, Stablecoin: {req.stablecoin}, Principal: {req.principal}"
-    })
-    
-    await manager.broadcast({
-        "type": "workflow_started",
-        "data": {
-            "borrower": req.borrower_address,
-            "lender": req.lender_address,
-            "principal": req.principal,
-            "stablecoin": req.stablecoin,
-            "role": req.role,
-            "conversation_id": conversation_id
-        }
-    })
-    
-    await manager.broadcast({
-        "type": "agent_status",
-        "data": {"status": "negotiating", "task": "Starting workflow..."}
-    })
-    
-    # Step 1: Credit Check
-    credit = await perform_credit_check(req.borrower_address, req.credit_score)
-    
-    if not credit["is_eligible"]:
-        # Reset state on failure
-        state.stats["agentStatus"] = "idle"
-        state.current_negotiation = None
+        # Add initial message
         state.conversations[conversation_id].append({
             "id": f"msg_{len(state.conversations[conversation_id])}",
             "timestamp": datetime.now().isoformat(),
             "agent": "system",
             "type": "message",
-            "content": "Credit check failed. Workflow terminated."
+            "content": f"Loan workflow started. Role: {req.role}, Stablecoin: {req.stablecoin}, Principal: {req.principal}"
         })
+        
+        await manager.broadcast({
+            "type": "workflow_started",
+            "data": {
+                "borrower": req.borrower_address,
+                "lender": req.lender_address,
+                "principal": req.principal,
+                "stablecoin": req.stablecoin,
+                "role": req.role,
+                "conversation_id": conversation_id
+            }
+        })
+        
         await manager.broadcast({
             "type": "agent_status",
-            "data": {"status": "idle", "task": "Workflow terminated - credit check failed"}
+            "data": {"status": "negotiating", "task": "Starting workflow..."}
         })
-        return {"success": False, "reason": "Credit check failed", "conversation_id": conversation_id}
-    
-    # Step 2: Create Loan Offer
-    offer_id = f"offer_{int(datetime.now().timestamp())}"
-    
-    # Add agent conversation messages
-    state.conversations[conversation_id].append({
-        "id": f"msg_{len(state.conversations[conversation_id])}",
-        "timestamp": datetime.now().isoformat(),
-        "agent": "system",
-        "type": "message",
-        "content": f"Loan offer created: {req.interest_rate}% interest rate, {req.principal} {req.stablecoin} principal"
-    })
-    
-    state.conversations[conversation_id].append({
-        "id": f"msg_{len(state.conversations[conversation_id])}",
-        "timestamp": datetime.now().isoformat(),
-        "agent": "lenny",
-        "type": "thought",
-        "content": f"Analyzing offer... Market average is 7.5%. This rate is {req.interest_rate - 7.5:.1f}% {'above' if req.interest_rate > 7.5 else 'below'} average.",
-        "confidence": 0.85,
-        "reasoning": "Rate is acceptable but could be negotiated lower" if req.interest_rate > 7.5 else "Rate is favorable"
-    })
-    
-    await manager.broadcast({
-        "type": "workflow_step",
-        "data": {
-            "step": 2,
-            "name": "Loan Offer Created",
-            "status": "completed",
-            "details": {
-                "offer_id": offer_id,
-                "lender_address": req.lender_address,
-                "borrower_address": req.borrower_address,
-                "principal": req.principal,
-                "interest_rate": req.interest_rate,
-                "term_months": req.term_months,
-                "stablecoin": req.stablecoin
-            }
-        }
-    })
-    
-    # Step 3: Open Hydra Head (uses real client if available)
-    await open_hydra_head_real(
-        borrower=req.borrower_address,
-        lender=req.lender_address,
-        principal=req.principal,
-        interest_rate=req.interest_rate,
-        term_months=req.term_months
-    )
-    
-    # Step 4: AI Analysis (actually run agents)
-    await manager.broadcast({
-        "type": "workflow_step",
-        "data": {
-            "step": 4,
-            "name": "AI Analysis (Llama 3)",
-            "status": "processing",
-            "details": {"rate": req.interest_rate}
-        }
-    })
-    
-    # Run agent negotiation in background
-    background_tasks.add_task(
-        run_agent_negotiation,
-        conversation_id=conversation_id,
-        borrower_address=req.borrower_address,
-        lender_address=req.lender_address,
-        principal=req.principal,
-        interest_rate=req.interest_rate,
-        term_months=req.term_months,
-        auto_confirm=req.auto_confirm
-    )
-    
-    # Wait a bit for agent to start
-    await asyncio.sleep(2)
-    
-    # Determine target rate (simplified for now, agents will handle negotiation)
-    if req.interest_rate <= 7.0:
-        target = req.interest_rate
-        action = "accept"
-    elif req.auto_confirm and req.interest_rate <= 9.0:
-        target = req.interest_rate
-        action = "accept"
-    else:
-        target = round(req.interest_rate - 1.5, 1)
-        action = "negotiate"
-    
-    await manager.broadcast({
-        "type": "workflow_step",
-        "data": {
-            "step": 4,
-            "name": "AI Analysis (Llama 3)",
-            "status": "completed",
-            "details": {
-                "verdict": "acceptable" if req.interest_rate <= 9 else "high",
-                "action": action,
-                "target_rate": target
-            }
-        }
-    })
-    
-    # Step 5: Negotiate (uses real client if available)
-    # Add negotiation message
-    state.conversations[conversation_id].append({
-        "id": f"msg_{len(state.conversations[conversation_id])}",
-        "timestamp": datetime.now().isoformat(),
-        "agent": "lenny",
-        "type": "message",
-        "content": f"Counter-offer: {target}% interest rate. This is more aligned with current market conditions."
-    })
-    
-    result = await negotiate_in_hydra_real(target)
-    
-    # Add response message
-    if result.get("action") == "accepted":
+        
+        # Step 1: Credit Check
+        credit = await perform_credit_check(req.borrower_address, req.credit_score)
+        
+        if not credit["is_eligible"]:
+            # Reset state on failure
+            state.stats["agentStatus"] = "idle"
+            state.current_negotiation = None
+            state.conversations[conversation_id].append({
+                "id": f"msg_{len(state.conversations[conversation_id])}",
+                "timestamp": datetime.now().isoformat(),
+                "agent": "system",
+                "type": "message",
+                "content": "Credit check failed. Workflow terminated."
+            })
+            await manager.broadcast({
+                "type": "agent_status",
+                "data": {"status": "idle", "task": "Workflow terminated - credit check failed"}
+            })
+            return {"success": False, "reason": "Credit check failed", "conversation_id": conversation_id}
+        
+        # Step 2: Create Loan Offer
+        offer_id = f"offer_{int(datetime.now().timestamp())}"
+        
+        # Add agent conversation messages
         state.conversations[conversation_id].append({
             "id": f"msg_{len(state.conversations[conversation_id])}",
             "timestamp": datetime.now().isoformat(),
-            "agent": "luna",
+            "agent": "system",
             "type": "message",
-            "content": f"Accepted! Final rate: {result.get('rate', target)}%"
+            "content": f"Loan offer created: {req.interest_rate}% interest rate, {req.principal} {req.stablecoin} principal"
         })
-    elif result.get("action") == "counter":
-        state.conversations[conversation_id].append({
-            "id": f"msg_{len(state.conversations[conversation_id])}",
-            "timestamp": datetime.now().isoformat(),
-            "agent": "luna",
-            "type": "message",
-            "content": f"Counter-offer: {result.get('rate', target)}% - meeting in the middle."
-        })
-        # If counter, negotiate once more
-        new_target = round((target + result["rate"]) / 2, 1)
+        
         state.conversations[conversation_id].append({
             "id": f"msg_{len(state.conversations[conversation_id])}",
             "timestamp": datetime.now().isoformat(),
             "agent": "lenny",
             "type": "thought",
-            "content": f"{new_target}% is acceptable. Accepting terms.",
-            "confidence": 0.92,
-            "reasoning": "Rate is at market average, savings achieved"
+            "content": f"Analyzing offer... Market average is 7.5%. This rate is {req.interest_rate - 7.5:.1f}% {'above' if req.interest_rate > 7.5 else 'below'} average.",
+            "confidence": 0.85,
+            "reasoning": "Rate is acceptable but could be negotiated lower" if req.interest_rate > 7.5 else "Rate is favorable"
         })
-        result = await negotiate_in_hydra_real(new_target)
-    
-    # Step 6: Accept and Settle (uses real client if available)
-    settlement = await close_hydra_and_settle_real()
-    
-    # Add final settlement message
-    state.conversations[conversation_id].append({
-        "id": f"msg_{len(state.conversations[conversation_id])}",
-        "timestamp": datetime.now().isoformat(),
-        "agent": "system",
-        "type": "action",
-        "content": f"Settlement transaction submitted. Loan disbursed successfully!"
-    })
-    
-    # Reset state after workflow completes
-    await asyncio.sleep(1)  # Brief delay to show completion
-    state.stats["agentStatus"] = "idle"
-    state.current_negotiation = None
-    
-    await manager.broadcast({
-        "type": "agent_status",
-        "data": {"status": "idle", "task": "Workflow complete. Ready for next loan."}
-    })
-    
-    await manager.broadcast({
-        "type": "conversation_update",
-        "data": {"conversation_id": conversation_id}
-    })
-    
-    return {
-        "success": True,
-        "conversation_id": conversation_id,
-        "settlement": settlement
-    }
+        
+        await manager.broadcast({
+            "type": "workflow_step",
+            "data": {
+                "step": 2,
+                "name": "Loan Offer Created",
+                "status": "completed",
+                "details": {
+                    "offer_id": offer_id,
+                    "lender_address": req.lender_address,
+                    "borrower_address": req.borrower_address,
+                    "principal": req.principal,
+                    "interest_rate": req.interest_rate,
+                    "term_months": req.term_months,
+                    "stablecoin": req.stablecoin
+                }
+            }
+        })
+        
+        # Step 3: Open Hydra Head (uses real client if available)
+        await open_hydra_head_real(
+            borrower=req.borrower_address,
+            lender=req.lender_address,
+            principal=req.principal,
+            interest_rate=req.interest_rate,
+            term_months=req.term_months
+        )
+        
+        # Step 4: AI Analysis (actually run agents)
+        await manager.broadcast({
+            "type": "workflow_step",
+            "data": {
+                "step": 4,
+                "name": "AI Analysis (Llama 3)",
+                "status": "processing",
+                "details": {"rate": req.interest_rate}
+            }
+        })
+        
+        # Run agent negotiation in background
+        background_tasks.add_task(
+            run_agent_negotiation,
+            conversation_id=conversation_id,
+            borrower_address=req.borrower_address,
+            lender_address=req.lender_address,
+            principal=req.principal,
+            interest_rate=req.interest_rate,
+            term_months=req.term_months,
+            auto_confirm=req.auto_confirm
+        )
+        
+        # Wait a bit for agent to start
+        await asyncio.sleep(2)
+        
+        # Determine target rate (simplified for now, agents will handle negotiation)
+        if req.interest_rate <= 7.0:
+            target = req.interest_rate
+            action = "accept"
+        elif req.auto_confirm and req.interest_rate <= 9.0:
+            target = req.interest_rate
+            action = "accept"
+        else:
+            target = round(req.interest_rate - 1.5, 1)
+            action = "negotiate"
+        
+        await manager.broadcast({
+            "type": "workflow_step",
+            "data": {
+                "step": 4,
+                "name": "AI Analysis (Llama 3)",
+                "status": "completed",
+                "details": {
+                    "verdict": "acceptable" if req.interest_rate <= 9 else "high",
+                    "action": action,
+                    "target_rate": target
+                }
+            }
+        })
+        
+        # Step 5: Negotiate (uses real client if available)
+        # Add negotiation message
+        state.conversations[conversation_id].append({
+            "id": f"msg_{len(state.conversations[conversation_id])}",
+            "timestamp": datetime.now().isoformat(),
+            "agent": "lenny",
+            "type": "message",
+            "content": f"Counter-offer: {target}% interest rate. This is more aligned with current market conditions."
+        })
+        
+        result = await negotiate_in_hydra_real(target)
+        
+        # Add response message
+        if result.get("action") == "accepted":
+            state.conversations[conversation_id].append({
+                "id": f"msg_{len(state.conversations[conversation_id])}",
+                "timestamp": datetime.now().isoformat(),
+                "agent": "luna",
+                "type": "message",
+                "content": f"Accepted! Final rate: {result.get('rate', target)}%"
+            })
+        elif result.get("action") == "counter":
+            state.conversations[conversation_id].append({
+                "id": f"msg_{len(state.conversations[conversation_id])}",
+                "timestamp": datetime.now().isoformat(),
+                "agent": "luna",
+                "type": "message",
+                "content": f"Counter-offer: {result.get('rate', target)}% - meeting in the middle."
+            })
+            # If counter, negotiate once more
+            new_target = round((target + result["rate"]) / 2, 1)
+            state.conversations[conversation_id].append({
+                "id": f"msg_{len(state.conversations[conversation_id])}",
+                "timestamp": datetime.now().isoformat(),
+                "agent": "lenny",
+                "type": "thought",
+                "content": f"{new_target}% is acceptable. Accepting terms.",
+                "confidence": 0.92,
+                "reasoning": "Rate is at market average, savings achieved"
+            })
+            result = await negotiate_in_hydra_real(new_target)
+        
+        # Step 6: Accept and Settle (uses real client if available)
+        settlement = await close_hydra_and_settle_real()
+        
+        # Add final settlement message
+        state.conversations[conversation_id].append({
+            "id": f"msg_{len(state.conversations[conversation_id])}",
+            "timestamp": datetime.now().isoformat(),
+            "agent": "system",
+            "type": "action",
+            "content": f"Settlement transaction submitted. Loan disbursed successfully!"
+        })
+        
+        # Reset state after workflow completes
+        await asyncio.sleep(1)  # Brief delay to show completion
+        state.stats["agentStatus"] = "idle"
+        state.current_negotiation = None
+        
+        await manager.broadcast({
+            "type": "agent_status",
+            "data": {"status": "idle", "task": "Workflow complete. Ready for next loan."}
+        })
+        
+        await manager.broadcast({
+            "type": "conversation_update",
+            "data": {"conversation_id": conversation_id}
+        })
+        
+        return {
+            "success": True,
+            "conversation_id": conversation_id,
+            "settlement": settlement
+        }
     except Exception as e:
         # Reset state on any error
         print(f"[Workflow] Error: {e}")
         state.stats["agentStatus"] = "idle"
         state.current_negotiation = None
         
-        state.conversations[conversation_id].append({
-            "id": f"msg_{len(state.conversations[conversation_id])}",
-            "timestamp": datetime.now().isoformat(),
-            "agent": "system",
-            "type": "message",
-            "content": f"Workflow error: {str(e)}"
-        })
+        if conversation_id in state.conversations:
+            state.conversations[conversation_id].append({
+                "id": f"msg_{len(state.conversations[conversation_id])}",
+                "timestamp": datetime.now().isoformat(),
+                "agent": "system",
+                "type": "message",
+                "content": f"Workflow error: {str(e)}"
+            })
         
         await manager.broadcast({
             "type": "agent_status",
