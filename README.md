@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🏦 Lendora AI
+#  Lendora AI
 
 ### Privacy-First DeFi Lending Protocol Powered by AI Agents
 
@@ -23,7 +23,7 @@
 
 ---
 
-## 📖 Overview
+##  Overview
 
 Lendora AI is a decentralized lending protocol that revolutionizes DeFi lending through:
 
@@ -32,17 +32,17 @@ Lendora AI is a decentralized lending protocol that revolutionizes DeFi lending 
 - **Ethereum L2 Settlement**: Fast, low-cost transactions on Arbitrum/Optimism
 - **Immersive Dashboard**: Beautiful 3D interface built with React Three Fiber
 
-## ✨ Features
+##  Features
 
 | Feature | Description |
 |---------|-------------|
-| 🤖 **AI Agents** | CrewAI-powered agents negotiate loan terms autonomously |
-| 🔐 **ZK Proofs** | Privacy-preserving credit checks via Circom circuits |
-| ⚡ **Layer 2** | Ethereum L2 (Arbitrum) for fast, cheap settlements |
-| 🎨 **3D Dashboard** | Immersive React Three Fiber interface |
-| 🔄 **Real-time Updates** | WebSocket-powered live negotiation tracking |
-| 📊 **Analytics** | Interactive charts and portfolio tracking |
-| 🌙 **Dark/Light Mode** | Beautiful themes with glassmorphism design |
+|  **AI Agents** | CrewAI-powered agents negotiate loan terms autonomously |
+|  **ZK Proofs** | Privacy-preserving credit checks via Circom circuits |
+|  **Layer 2** | Ethereum L2 (Arbitrum) for fast, cheap settlements |
+|  **3D Dashboard** | Immersive React Three Fiber interface |
+|  **Real-time Updates** | WebSocket-powered live negotiation tracking |
+|  **Analytics** | Interactive charts and portfolio tracking |
+|  **Dark/Light Mode** | Beautiful themes with glassmorphism design |
 
 ## 🏗 Architecture
 
@@ -73,7 +73,7 @@ Lendora AI is a decentralized lending protocol that revolutionizes DeFi lending 
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### Prerequisites
 
@@ -156,7 +156,7 @@ ETHEREUM_RPC_URL=https://sepolia-rollup.arbitrum.io/rpc
 
 See [`env.example`](./env.example) for all available options.
 
-## 📁 Project Structure
+##  Project Structure
 
 ```
 Lendora-AI/
@@ -193,7 +193,7 @@ Lendora-AI/
 └── README.md
 ```
 
-## 🔌 API Reference
+##  API Reference
 
 ### REST Endpoints
 
@@ -223,7 +223,7 @@ const ws = new WebSocket('ws://localhost:8000/ws');
 // - conversation_update: New conversation message
 ```
 
-## 🌐 Deployment
+##  Deployment
 
 ### Recommended Setup
 
@@ -270,7 +270,7 @@ See [`DEPLOY.md`](./DEPLOY.md) for detailed deployment instructions.
 - **Oracles**: Chainlink
 - **ZK Circuits**: Circom
 
-## 📚 Documentation
+##  Documentation
 
 | Document | Description |
 |----------|-------------|
@@ -281,14 +281,14 @@ See [`DEPLOY.md`](./DEPLOY.md) for detailed deployment instructions.
 | [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md) | Advanced deployment |
 | [`contracts/README.md`](./contracts/README.md) | Smart contract docs |
 
-## 🔒 Security
+##  Security
 
 - **ZK Proofs**: Credit scores verified without revealing actual values
 - **Non-custodial**: Users maintain control of their keys
 - **Access Control**: Role-based permissions in smart contracts
 - **Oracle Security**: Chainlink decentralized price feeds
 
-## 🤝 Contributing
+##  Contributing
 
 Contributions are welcome! Please read our contributing guidelines before submitting PRs.
 
@@ -298,7 +298,7 @@ Contributions are welcome! Please read our contributing guidelines before submit
 4. Push to branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📄 License
+##  License
 
 This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
 
