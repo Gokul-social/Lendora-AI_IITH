@@ -1,18 +1,28 @@
 """
 Lendora AI - FastAPI Backend Server
-REST API and WebSocket server for frontend communication
-Integrates with AI agents, Hydra, and provides real-time updates
+Complete API for the Privacy-First DeFi Lending Platform
+
+Integrates:
+- Midnight ZK Credit Checks
+- Llama 3 AI Analysis
+- Hydra Off-chain Negotiation
+- Aiken Validator Settlement
 """
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from typing import List, Optional
+from typing import List, Optional, Dict
 import asyncio
 import json
 import os
+import sys
 from datetime import datetime
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
+
+# Add agents to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
+
 
 # ============================================================================
 # Application Setup
@@ -20,7 +30,6 @@ from contextlib import asynccontextmanager
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifecycle manager."""
     print("=" * 70)
     print("Lendora AI Backend API Started")
     print("=" * 70)
@@ -29,48 +38,68 @@ async def lifespan(app: FastAPI):
     print("Docs:        http://localhost:8000/docs")
     print("=" * 70)
     yield
-    print("Shutting down Lendora AI Backend...")
 
 app = FastAPI(
     title="Lendora AI API",
-    description="Privacy-First DeFi Lending Platform on Cardano",
-    version="1.0.0",
+    description="Privacy-First DeFi Lending on Cardano",
+    version="2.0.0",
     lifespan=lifespan
 )
 
-# CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+
 # ============================================================================
 # Data Models
 # ============================================================================
 
-class LoanOffer(BaseModel):
-    id: str
+class CreditCheckRequest(BaseModel):
+    borrower_address: str
+    credit_score: int  # Private - only used for ZK proof
+
+class CreditCheckResponse(BaseModel):
+    borrower_address: str
+    is_eligible: bool
+    proof_hash: str
+    timestamp: str
+
+class LoanOfferRequest(BaseModel):
     lender_address: str
     principal: float
-    initial_interest_rate: float
+    interest_rate: float
     term_months: int
-    offered_at: str
-    status: str = "active"
-    collateral_ratio: float = 1.5
-
-class LoanRequest(BaseModel):
     borrower_address: str
-    principal: float
-    term_months: int
+
+class NegotiationRequest(BaseModel):
+    offer_id: str
     proposed_rate: float
+
+class WorkflowRequest(BaseModel):
+    borrower_address: str
+    credit_score: int
+    principal: float
+    interest_rate: float
+    term_months: int
+    lender_address: str
+
+class WorkflowStep(BaseModel):
+    step: int
+    name: str
+    status: str
+    details: Dict
+    timestamp: str
+
+class DashboardStats(BaseModel):
+    totalBalance: float
+    activeLoans: int
+    totalProfit: float
+    agentStatus: str
 
 class Trade(BaseModel):
     id: str
@@ -81,155 +110,305 @@ class Trade(BaseModel):
     profit: Optional[float] = None
     status: str
 
-class AgentStatus(BaseModel):
-    status: str
-    current_task: Optional[str] = None
-    last_decision: Optional[str] = None
-
-class DashboardStats(BaseModel):
-    totalBalance: float
-    activeLoans: int
-    totalProfit: float
-    agentStatus: str
-
-class XAILog(BaseModel):
-    timestamp: float
-    decision: str
-    reasoning: str
-    confidence: float
-    agent: str = "borrower"
 
 # ============================================================================
-# WebSocket Connection Manager
+# WebSocket Manager
 # ============================================================================
 
 class ConnectionManager:
     def __init__(self):
-        self.active_connections: List[WebSocket] = []
-        self._lock = asyncio.Lock()
-
-    async def connect(self, websocket: WebSocket):
-        await websocket.accept()
-        async with self._lock:
-            self.active_connections.append(websocket)
-        print(f"[WebSocket] Client connected. Total: {len(self.active_connections)}")
-
-    async def disconnect(self, websocket: WebSocket):
-        async with self._lock:
-            if websocket in self.active_connections:
-                self.active_connections.remove(websocket)
-        print(f"[WebSocket] Client disconnected. Total: {len(self.active_connections)}")
-
+        self.connections: List[WebSocket] = []
+    
+    async def connect(self, ws: WebSocket):
+        await ws.accept()
+        self.connections.append(ws)
+    
+    def disconnect(self, ws: WebSocket):
+        if ws in self.connections:
+            self.connections.remove(ws)
+    
     async def broadcast(self, message: dict):
-        async with self._lock:
-            connections = self.active_connections.copy()
-        
-        for connection in connections:
+        for conn in self.connections:
             try:
-                await connection.send_json(message)
-            except Exception:
-                # Connection might be closed, remove it
-                await self.disconnect(connection)
-
-    async def send_to(self, websocket: WebSocket, message: dict):
-        try:
-            await websocket.send_json(message)
-        except Exception:
-            await self.disconnect(websocket)
+                await conn.send_json(message)
+            except:
+                pass
 
 manager = ConnectionManager()
 
+
 # ============================================================================
-# In-Memory Data Store (Replace with database in production)
+# In-Memory State
 # ============================================================================
 
-class DataStore:
+class AppState:
     def __init__(self):
-        self.loans: List[dict] = [
-            {
-                "id": "loan_001",
-                "lender_address": "addr1_lender_xyz",
-                "principal": 1000.0,
-                "initial_interest_rate": 8.5,
-                "term_months": 12,
-                "offered_at": "2025-11-29T12:00:00Z",
-                "status": "active",
-                "collateral_ratio": 1.5
-            }
-        ]
-        
-        self.trades: List[dict] = [
-            {
-                "id": "trade_001",
-                "timestamp": "2025-11-29T10:30:00Z",
-                "type": "loan_accepted",
-                "principal": 1000.0,
-                "interestRate": 7.5,
-                "profit": 75.0,
-                "status": "completed"
-            },
-            {
-                "id": "trade_002",
-                "timestamp": "2025-11-28T15:45:00Z",
-                "type": "loan_repaid",
-                "principal": 500.0,
-                "interestRate": 8.0,
-                "profit": 40.0,
-                "status": "completed"
-            },
-            {
-                "id": "trade_003",
-                "timestamp": "2025-11-27T09:15:00Z",
-                "type": "negotiation",
-                "principal": 2000.0,
-                "interestRate": 6.5,
-                "profit": None,
-                "status": "pending"
-            }
-        ]
-        
-        self.agent_status = {
-            "status": "profiting",
-            "current_task": "Monitoring new loan offers",
-            "last_decision": "Accepted loan at 7.5% APR"
-        }
-        
+        self.workflow_steps: List[Dict] = []
+        self.current_negotiation: Optional[Dict] = None
+        self.credit_checks: Dict[str, Dict] = {}
+        self.trades: List[Dict] = []
         self.stats = {
             "totalBalance": 125450.75,
             "activeLoans": 8,
             "totalProfit": 12543.50,
-            "agentStatus": "profiting"
+            "agentStatus": "idle"
         }
 
-store = DataStore()
+state = AppState()
+
 
 # ============================================================================
-# Helper Functions
+# Midnight ZK Credit Check (Mock)
 # ============================================================================
 
-def get_log_file_path(filename: str) -> str:
-    """Get path to a log file in the logs directory."""
-    return os.path.join(
-        os.path.dirname(__file__),
-        f"../../logs/{filename}"
-    )
+async def perform_credit_check(borrower: str, score: int) -> Dict:
+    """Perform ZK credit check via Midnight."""
+    await manager.broadcast({
+        "type": "workflow_step",
+        "data": {
+            "step": 1,
+            "name": "Midnight ZK Credit Check",
+            "status": "processing",
+            "details": {"borrower": borrower}
+        }
+    })
+    
+    await asyncio.sleep(1)  # Simulate processing
+    
+    is_eligible = score >= 700
+    proof_hash = f"zk_proof_{borrower[:10]}_{int(datetime.now().timestamp())}"
+    
+    result = {
+        "borrower_address": borrower,
+        "is_eligible": is_eligible,
+        "proof_hash": proof_hash,
+        "timestamp": datetime.now().isoformat()
+    }
+    
+    state.credit_checks[borrower] = result
+    
+    await manager.broadcast({
+        "type": "workflow_step",
+        "data": {
+            "step": 1,
+            "name": "Midnight ZK Credit Check",
+            "status": "completed",
+            "details": {
+                "is_eligible": is_eligible,
+                "proof_hash": proof_hash,
+                "message": "Credit score verified privately via ZK proof"
+            }
+        }
+    })
+    
+    return result
 
-def read_jsonl_file(filepath: str, limit: int = 50) -> List[dict]:
-    """Read entries from a JSONL file."""
-    entries = []
-    if os.path.exists(filepath):
-        try:
-            with open(filepath, 'r') as f:
-                for line in f:
-                    line = line.strip()
-                    if line:
-                        try:
-                            entries.append(json.loads(line))
-                        except json.JSONDecodeError:
-                            pass
-        except IOError:
-            pass
-    return entries[-limit:]
+
+# ============================================================================
+# Hydra Negotiation (Mock)
+# ============================================================================
+
+async def open_hydra_head(offer: Dict) -> Dict:
+    """Open Hydra Head for negotiation."""
+    head_id = f"head_{offer['offer_id']}_{int(datetime.now().timestamp())}"
+    
+    await manager.broadcast({
+        "type": "workflow_step",
+        "data": {
+            "step": 3,
+            "name": "Open Hydra Head",
+            "status": "completed",
+            "details": {
+                "head_id": head_id,
+                "participants": [offer["lender_address"], offer["borrower_address"]]
+            }
+        }
+    })
+    
+    state.current_negotiation = {
+        "head_id": head_id,
+        "offer": offer,
+        "current_rate": offer["interest_rate"],
+        "rounds": 0,
+        "status": "open"
+    }
+    
+    return {"head_id": head_id, "status": "open"}
+
+
+async def negotiate_in_hydra(proposed_rate: float) -> Dict:
+    """Negotiate in Hydra Head (zero gas!)."""
+    if not state.current_negotiation:
+        return {"error": "No active negotiation"}
+    
+    neg = state.current_negotiation
+    neg["rounds"] += 1
+    
+    await manager.broadcast({
+        "type": "workflow_step",
+        "data": {
+            "step": 4,
+            "name": f"Hydra Negotiation Round {neg['rounds']}",
+            "status": "processing",
+            "details": {
+                "proposed_rate": proposed_rate,
+                "current_rate": neg["current_rate"]
+            }
+        }
+    })
+    
+    await asyncio.sleep(0.5)
+    
+    original_rate = neg["offer"]["interest_rate"]
+    
+    if proposed_rate >= original_rate - 1.5:
+        # Accept
+        neg["current_rate"] = proposed_rate
+        neg["final_rate"] = proposed_rate
+        neg["status"] = "accepted"
+        action = "accepted"
+        message = f"Deal at {proposed_rate}%!"
+    elif neg["rounds"] >= 2:
+        # Compromise
+        middle = round((proposed_rate + neg["current_rate"]) / 2, 1)
+        neg["current_rate"] = middle
+        neg["final_rate"] = middle
+        neg["status"] = "accepted"
+        action = "accepted"
+        message = f"Compromise at {middle}%!"
+    else:
+        # Counter
+        counter = round(neg["current_rate"] - 0.5, 1)
+        neg["current_rate"] = counter
+        action = "counter"
+        message = f"Lender countered: {counter}%"
+    
+    await manager.broadcast({
+        "type": "workflow_step",
+        "data": {
+            "step": 4,
+            "name": f"Hydra Negotiation Round {neg['rounds']}",
+            "status": "completed",
+            "details": {
+                "action": action,
+                "rate": neg.get("final_rate", neg["current_rate"]),
+                "message": message
+            }
+        }
+    })
+    
+    return {
+        "success": True,
+        "action": action,
+        "rate": neg.get("final_rate", neg["current_rate"]),
+        "message": message
+    }
+
+
+async def close_hydra_and_settle() -> Dict:
+    """Close Hydra Head and settle via Aiken Validator."""
+    if not state.current_negotiation:
+        return {"error": "No active negotiation"}
+    
+    neg = state.current_negotiation
+    
+    # Close Head
+    await manager.broadcast({
+        "type": "workflow_step",
+        "data": {
+            "step": 5,
+            "name": "Close Hydra Head",
+            "status": "completed",
+            "details": {
+                "head_id": neg["head_id"],
+                "final_rate": neg["final_rate"],
+                "rounds": neg["rounds"],
+                "savings": round(neg["offer"]["interest_rate"] - neg["final_rate"], 2)
+            }
+        }
+    })
+    
+    await asyncio.sleep(0.5)
+    
+    # Generate settlement TX
+    tx_hash = f"tx_{neg['head_id']}_{int(datetime.now().timestamp())}"
+    
+    # Aiken Validator verification
+    await manager.broadcast({
+        "type": "workflow_step",
+        "data": {
+            "step": 6,
+            "name": "Aiken Validator Settlement",
+            "status": "processing",
+            "details": {"tx_hash": tx_hash}
+        }
+    })
+    
+    await asyncio.sleep(1)
+    
+    settlement = {
+        "tx_hash": tx_hash,
+        "borrower": neg["offer"]["borrower_address"],
+        "lender": neg["offer"]["lender_address"],
+        "principal": neg["offer"]["principal"],
+        "final_rate": neg["final_rate"],
+        "final_rate_bps": int(neg["final_rate"] * 100),
+        "term_months": neg["offer"]["term_months"],
+        "status": "LOAN_DISBURSED"
+    }
+    
+    await manager.broadcast({
+        "type": "workflow_step",
+        "data": {
+            "step": 6,
+            "name": "Aiken Validator Settlement",
+            "status": "completed",
+            "details": {
+                "borrower_sig": "OK",
+                "lender_sig": "OK",
+                "rate_valid": "OK",
+                "settlement": settlement
+            }
+        }
+    })
+    
+    # Record trade
+    trade = {
+        "id": f"trade_{int(datetime.now().timestamp())}",
+        "timestamp": datetime.now().isoformat(),
+        "type": "loan_accepted",
+        "principal": neg["offer"]["principal"],
+        "interestRate": neg["final_rate"],
+        "originalRate": neg["offer"]["interest_rate"],
+        "profit": round((neg["offer"]["interest_rate"] - neg["final_rate"]) * neg["offer"]["principal"] / 100, 2),
+        "status": "completed"
+    }
+    state.trades.insert(0, trade)
+    
+    # Update stats
+    state.stats["activeLoans"] += 1
+    state.stats["totalProfit"] += trade["profit"]
+    
+    # Clear negotiation
+    state.current_negotiation = None
+    
+    # Final broadcast
+    await manager.broadcast({
+        "type": "workflow_complete",
+        "data": {
+            "success": True,
+            "settlement": settlement,
+            "trade": trade
+        }
+    })
+    
+    await manager.broadcast({
+        "type": "stats_update",
+        "data": state.stats
+    })
+    
+    return settlement
+
 
 # ============================================================================
 # REST API Endpoints
@@ -237,232 +416,216 @@ def read_jsonl_file(filepath: str, limit: int = 50) -> List[dict]:
 
 @app.get("/")
 async def root():
-    """API root - health check."""
-    return {
-        "message": "Lendora AI API",
-        "version": "1.0.0",
-        "status": "healthy",
-        "timestamp": datetime.now().isoformat()
-    }
+    return {"message": "Lendora AI API", "version": "2.0.0"}
 
 @app.get("/health")
-async def health_check():
-    """Detailed health check endpoint."""
-    return {
-        "status": "healthy",
-        "services": {
-            "api": "running",
-            "websocket": "ready",
-            "connections": len(manager.active_connections)
-        },
-        "timestamp": datetime.now().isoformat()
-    }
+async def health():
+    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
 
-# --- Loan Endpoints ---
 
-@app.get("/api/loans/offers", response_model=List[LoanOffer])
-async def get_loan_offers():
-    """Get current loan offers."""
-    return store.loans
+# --- Dashboard ---
 
-@app.post("/api/loans/offers", response_model=LoanOffer)
-async def create_loan_offer(offer: LoanOffer):
-    """Create a new loan offer."""
-    offer_dict = offer.model_dump()
-    offer_dict["offered_at"] = datetime.now().isoformat()
-    store.loans.append(offer_dict)
+@app.get("/api/dashboard/stats")
+async def get_stats():
+    return state.stats
+
+@app.get("/api/trades/history")
+async def get_trades():
+    return state.trades[:20]
+
+
+# --- Credit Check ---
+
+@app.post("/api/midnight/credit-check")
+async def credit_check(req: CreditCheckRequest, background_tasks: BackgroundTasks):
+    """Submit credit score for ZK verification."""
+    result = await perform_credit_check(req.borrower_address, req.credit_score)
+    return result
+
+
+# --- Loan Workflow ---
+
+@app.post("/api/workflow/start")
+async def start_workflow(req: WorkflowRequest):
+    """Start the complete lending workflow."""
+    state.stats["agentStatus"] = "negotiating"
     
-    # Broadcast to WebSocket clients
     await manager.broadcast({
-        "type": "new_offer",
-        "data": offer_dict
+        "type": "workflow_started",
+        "data": {"borrower": req.borrower_address, "principal": req.principal}
     })
     
-    return offer_dict
-
-@app.post("/api/loans/request")
-async def request_loan(request: LoanRequest):
-    """Submit a loan request (triggers agent negotiation)."""
-    # In production, this would queue the request for agent processing
-    request_id = f"req_{int(datetime.now().timestamp())}"
-    
-    response = {
-        "request_id": request_id,
-        "status": "pending",
-        "message": "Loan request submitted. Agent Lenny is analyzing...",
-        "request": request.model_dump()
-    }
-    
-    # Broadcast request to connected clients
-    await manager.broadcast({
-        "type": "loan_request",
-        "data": response
-    })
-    
-    return response
-
-# --- Trade Endpoints ---
-
-@app.get("/api/trades/history", response_model=List[Trade])
-async def get_trade_history(limit: int = 50):
-    """Get trade history."""
-    return store.trades[:limit]
-
-@app.post("/api/trades")
-async def record_trade(trade: Trade):
-    """Record a new trade."""
-    trade_dict = trade.model_dump()
-    store.trades.insert(0, trade_dict)
-    
-    # Update stats
-    if trade.profit:
-        store.stats["totalProfit"] += trade.profit
-    
-    # Broadcast to WebSocket clients
-    await manager.broadcast({
-        "type": "new_trade",
-        "data": trade_dict
-    })
-    
-    return trade_dict
-
-# --- Agent Endpoints ---
-
-@app.get("/api/agent/status", response_model=AgentStatus)
-async def get_agent_status():
-    """Get AI agent current status."""
-    return store.agent_status
-
-@app.post("/api/agent/status")
-async def update_agent_status(status: AgentStatus):
-    """Update agent status (called by agent process)."""
-    store.agent_status = status.model_dump()
-    store.stats["agentStatus"] = status.status
-    
-    # Broadcast status update
     await manager.broadcast({
         "type": "agent_status",
+        "data": {"status": "negotiating", "task": "Starting workflow..."}
+    })
+    
+    # Step 1: Credit Check
+    credit = await perform_credit_check(req.borrower_address, req.credit_score)
+    
+    if not credit["is_eligible"]:
+        state.stats["agentStatus"] = "idle"
+        return {"success": False, "reason": "Credit check failed"}
+    
+    # Step 2: Create Loan Offer
+    offer = {
+        "offer_id": f"offer_{int(datetime.now().timestamp())}",
+        "lender_address": req.lender_address,
+        "borrower_address": req.borrower_address,
+        "principal": req.principal,
+        "interest_rate": req.interest_rate,
+        "term_months": req.term_months
+    }
+    
+    await manager.broadcast({
+        "type": "workflow_step",
         "data": {
-            **store.agent_status,
-            "timestamp": datetime.now().isoformat()
+            "step": 2,
+            "name": "Loan Offer Created",
+            "status": "completed",
+            "details": offer
         }
     })
     
-    return store.agent_status
+    # Step 3: Open Hydra Head
+    await open_hydra_head(offer)
+    
+    # Step 4: AI Analysis
+    await manager.broadcast({
+        "type": "workflow_step",
+        "data": {
+            "step": 4,
+            "name": "AI Analysis (Llama 3)",
+            "status": "processing",
+            "details": {"rate": req.interest_rate}
+        }
+    })
+    
+    await asyncio.sleep(1)
+    
+    # Determine target rate
+    if req.interest_rate <= 7.0:
+        target = req.interest_rate
+        action = "accept"
+    else:
+        target = round(req.interest_rate - 1.5, 1)
+        action = "negotiate"
+    
+    await manager.broadcast({
+        "type": "workflow_step",
+        "data": {
+            "step": 4,
+            "name": "AI Analysis (Llama 3)",
+            "status": "completed",
+            "details": {
+                "verdict": "acceptable" if req.interest_rate <= 9 else "high",
+                "action": action,
+                "target_rate": target
+            }
+        }
+    })
+    
+    # Step 5: Negotiate
+    result = await negotiate_in_hydra(target)
+    
+    # If counter, negotiate once more
+    if result.get("action") == "counter":
+        new_target = round((target + result["rate"]) / 2, 1)
+        result = await negotiate_in_hydra(new_target)
+    
+    # Step 6: Accept and Settle
+    settlement = await close_hydra_and_settle()
+    
+    state.stats["agentStatus"] = "profiting"
+    
+    await manager.broadcast({
+        "type": "agent_status",
+        "data": {"status": "profiting", "task": "Loan disbursed successfully!"}
+    })
+    
+    return {
+        "success": True,
+        "settlement": settlement
+    }
+
+
+@app.post("/api/negotiation/propose")
+async def propose_rate(req: NegotiationRequest):
+    """Propose a rate in active negotiation."""
+    result = await negotiate_in_hydra(req.proposed_rate)
+    return result
+
+
+@app.post("/api/negotiation/accept")
+async def accept_terms():
+    """Accept current terms and settle."""
+    settlement = await close_hydra_and_settle()
+    return settlement
+
+
+# --- Agent Status ---
+
+@app.get("/api/agent/status")
+async def agent_status():
+    return {
+        "status": state.stats["agentStatus"],
+        "current_task": "Monitoring offers" if state.stats["agentStatus"] == "idle" else "Negotiating",
+        "active_negotiation": state.current_negotiation is not None
+    }
+
 
 @app.get("/api/agent/xai-logs")
-async def get_xai_logs(limit: int = 50):
+async def xai_logs(limit: int = 20):
     """Get XAI decision logs."""
-    log_file = get_log_file_path("xai_decisions.jsonl")
-    logs = read_jsonl_file(log_file, limit)
-    return logs
+    log_file = os.path.join(os.path.dirname(__file__), "../../logs/xai_decisions.jsonl")
+    logs = []
+    if os.path.exists(log_file):
+        with open(log_file) as f:
+            for line in f:
+                try:
+                    logs.append(json.loads(line))
+                except:
+                    pass
+    return logs[-limit:]
 
-# --- Dashboard Endpoints ---
-
-@app.get("/api/dashboard/stats", response_model=DashboardStats)
-async def get_dashboard_stats():
-    """Get dashboard statistics."""
-    return store.stats
 
 # ============================================================================
 # WebSocket Endpoint
 # ============================================================================
 
 @app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    """WebSocket endpoint for real-time updates."""
-    await manager.connect(websocket)
+async def websocket_endpoint(ws: WebSocket):
+    await manager.connect(ws)
     
     try:
-        # Send initial status
-        await manager.send_to(websocket, {
-            "type": "agent_status",
-            "data": {
-                **store.agent_status,
-                "timestamp": datetime.now().isoformat()
-            }
+        # Send initial state
+        await ws.send_json({
+            "type": "connected",
+            "data": {"message": "Connected to Lendora AI"}
         })
         
-        # Send current stats
-        await manager.send_to(websocket, {
+        await ws.send_json({
             "type": "stats_update",
-            "data": store.stats
+            "data": state.stats
         })
         
-        # Keep connection alive and handle incoming messages
-        while True:
-            try:
-                # Wait for incoming message with timeout
-                data = await asyncio.wait_for(
-                    websocket.receive_text(),
-                    timeout=30.0
-                )
-                
-                # Handle incoming commands
-                try:
-                    message = json.loads(data)
-                    await handle_ws_message(websocket, message)
-                except json.JSONDecodeError:
-                    pass
-                    
-            except asyncio.TimeoutError:
-                # Send keepalive ping
-                await manager.send_to(websocket, {
-                    "type": "ping",
-                    "timestamp": datetime.now().isoformat()
-                })
-                
-    except WebSocketDisconnect:
-        await manager.disconnect(websocket)
-    except Exception as e:
-        print(f"[WebSocket] Error: {e}")
-        await manager.disconnect(websocket)
-
-async def handle_ws_message(websocket: WebSocket, message: dict):
-    """Handle incoming WebSocket messages."""
-    msg_type = message.get("type")
-    
-    if msg_type == "pong":
-        # Client responding to ping
-        pass
-    
-    elif msg_type == "subscribe":
-        # Client subscribing to specific updates
-        channel = message.get("channel")
-        print(f"[WebSocket] Client subscribed to: {channel}")
-    
-    elif msg_type == "get_status":
-        # Client requesting current status
-        await manager.send_to(websocket, {
+        await ws.send_json({
             "type": "agent_status",
-            "data": {
-                **store.agent_status,
-                "timestamp": datetime.now().isoformat()
-            }
+            "data": {"status": state.stats["agentStatus"]}
         })
-
-# ============================================================================
-# Background Task: Periodic Status Updates
-# ============================================================================
-
-async def periodic_updates():
-    """Send periodic updates to all connected clients."""
-    while True:
-        await asyncio.sleep(10)  # Every 10 seconds
         
-        if manager.active_connections:
-            await manager.broadcast({
-                "type": "agent_status",
-                "data": {
-                    **store.agent_status,
-                    "timestamp": datetime.now().isoformat()
-                }
-            })
+        while True:
+            data = await ws.receive_text()
+            msg = json.loads(data)
+            
+            if msg.get("type") == "ping":
+                await ws.send_json({"type": "pong"})
+            
+    except WebSocketDisconnect:
+        manager.disconnect(ws)
+    except Exception as e:
+        manager.disconnect(ws)
 
-@app.on_event("startup")
-async def start_background_tasks():
-    """Start background tasks on app startup."""
-    asyncio.create_task(periodic_updates())
 
 # ============================================================================
 # Entry Point

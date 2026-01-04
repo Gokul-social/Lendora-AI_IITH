@@ -1,21 +1,53 @@
 """
 Lendora AI - Agents Module
-Privacy-First AI Agents for DeFi Lending
+Privacy-First AI Agents for DeFi Lending on Cardano
+
+Architecture:
+    Lender --> Loan Offer --> AI Agent (Lenny)
+                                  |
+                            Analyze with Llama 3
+                                  |
+                            Open Hydra Head
+                                  |
+                         Negotiate (off-chain)
+                                  |
+                            Accept Terms
+                                  |
+                    Close Head --> Settlement Tx
+                                  |
+                        Aiken Validator (verify dual sig)
+                                  |
+                            Loan Disbursed!
 
 Agents:
-- Borrower Agent ("Lenny"): Negotiates loan terms on behalf of borrowers
-- Lender Agent ("Luna"): Manages lending pool and evaluates loan requests
+- Borrower Agent ("Lenny"): Analyzes offers, negotiates in Hydra, settles on-chain
+- Lender Agent ("Luna"): Creates offers, evaluates risk, signs settlements
 """
 
-from .borrower_agent import create_borrower_agent, monitor_loan_offers
-from .lender_agent import create_lender_agent, run_lender_agent, LendingPool
+from .borrower_agent import (
+    create_borrower_agent,
+    monitor_loan_offers,
+    process_loan_offer,
+    LoanOffer,
+    HydraHeadManager,
+)
+from .lender_agent import (
+    create_lender_agent,
+    run_lender_agent,
+    handle_negotiation_request,
+    LendingPool,
+)
 
 __all__ = [
-    # Borrower Agent
+    # Borrower Agent (Lenny)
     "create_borrower_agent",
     "monitor_loan_offers",
-    # Lender Agent
+    "process_loan_offer",
+    "LoanOffer",
+    "HydraHeadManager",
+    # Lender Agent (Luna)
     "create_lender_agent",
     "run_lender_agent",
+    "handle_negotiation_request",
     "LendingPool",
 ]
